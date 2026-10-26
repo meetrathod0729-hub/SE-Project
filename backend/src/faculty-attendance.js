@@ -63,42 +63,142 @@ export function createFacultyAttendanceRouter(supabaseAdmin) {
     }
 
     // Courses assigned to the currently authenticated faculty member.
+
     router.get('/courses', async (req, res) => {
         try {
             const { data: assignments, error } = await supabaseAdmin
                 .from('course_faculty_assignments')
-                .select('course_id, course:courses(id, name, code, department_id)')
+                .select(`
+        course_id,
+        course:courses(
+          id,
+          name,
+          code,
+          department_id,
+          department:departments(id, name, code)
+        )
+      `)
                 .eq('faculty_id', req.faculty.id)
                 .eq('status', 'active');
 
-            if (error) return sendDbError(res, 'load assigned courses', error);
+            if (error) {
+                console.error('[attendance] Course assignments failed:', error.message);
+                return res.status(500).json({
+                    error: 'Could not load assigned courses.'
+                });
+            }
 
             const courses = (assignments || [])
                 .map(item => item.course)
                 .filter(Boolean);
 
-            const uniqueCourses = [...new Map(courses.map(course => [course.id, course])).values()];
-            res.json({ courses: uniqueCourses });
+            const uniqueCourses = [
+                ...new Map(courses.map(course => [course.id, course])).values()
+            ];
+
+            if (uniqueCourses.length === 0) {
+                return res.json({ courses: [] });
+            }
+
+            const courseIds = uniqueCourses.map(course => course.id);
+
+            const { data: semesterAssignments, error: semesterError } =
+                await supabaseAdmin
+                    .from('course_semester_assignments')
+                    .select(`
+          course_id,
+          semester_id,
+          semester:semesters(
+            id,
+            label,
+            semester_number,
+            status,
+            academic_year:academic_years(id, year_code, label)
+          )
+        `)
+                    .in('course_id', courseIds)
+                    .eq('status', 'active');
+
+            if (semesterError) {
+                console.error(
+                    '[attendance] Course semester assignments failed:',
+                    semesterError.message
+                );
+
+                return res.status(500).json({
+                    error: 'Could not load course semester assignments.'
+                });
+            }
+
+            const semesterByCourse = new Map(
+                (semesterAssignments || [])
+                    .filter(item => item.semester?.status === 'active')
+                    .map(item => [
+                        item.course_id,
+                        {
+                            ...item.semester,
+                            name: item.semester.label ||
+                                `Semester ${item.semester.semester_number}`
+                        }
+                    ])
+            );
+
+            res.json({
+                courses: uniqueCourses.map(course => ({
+                    ...course,
+                    semester: semesterByCourse.get(course.id) || null,
+                    semester_id: semesterByCourse.get(course.id)?.id || ''
+                }))
+            });
         } catch (error) {
-            return sendDbError(res, 'load assigned courses', error);
+            console.error('[attendance] Courses endpoint failed:', error.message);
+
+            res.status(500).json({
+                error: 'Could not load assigned courses.'
+            });
         }
     });
 
+
     // Active semesters available for attendance.
+
     router.get('/semesters', async (_req, res) => {
         try {
             const { data, error } = await supabaseAdmin
                 .from('semesters')
-                .select('id, name, status, academic_year_id')
+                .select(`
+        id,
+        label,
+        semester_number,
+        academic_year_id,
+        status,
+        academic_year:academic_years(id, year_code, label)
+      `)
                 .eq('status', 'active')
-                .order('name');
+                .order('semester_number');
 
-            if (error) return sendDbError(res, 'load active semesters', error);
-            res.json({ semesters: data || [] });
+            if (error) {
+                console.error('[attendance] Could not load semesters:', error.message);
+                return res.status(500).json({
+                    error: 'Could not load active semesters.'
+                });
+            }
+
+            res.json({
+                semesters: (data || []).map(semester => ({
+                    ...semester,
+                    name: semester.label || `Semester ${semester.semester_number}`
+                }))
+            });
         } catch (error) {
-            return sendDbError(res, 'load active semesters', error);
+            console.error('[attendance] Semester endpoint failed:', error.message);
+            res.status(500).json({
+                error: 'Could not load active semesters.'
+            });
         }
     });
+
+
 
     // List sessions for one assigned course and semester.
     router.get('/sessions', async (req, res) => {

@@ -7,6 +7,7 @@ import { createAcademicRouter } from './academic.js';
 import { createFacultyHandlers } from './faculty.js';
 import { createFacultyManagementRouter } from './faculty-management.js';
 import { createFacultyAttendanceRouter } from './faculty-attendance.js';
+import { createStudentEnrollmentsRouter } from './student-enrollments.js';
 
 const router = Router();
 const studentVerification = createStudentVerificationHandlers(supabaseAdmin);
@@ -30,6 +31,10 @@ router.use('/faculty-management', createFacultyManagementRouter(supabaseAdmin));
 router.use(
   '/faculty/me/attendance',
   createFacultyAttendanceRouter(supabaseAdmin)
+);
+router.use(
+  '/students',
+  createStudentEnrollmentsRouter(supabaseAdmin)
 );
 
 async function validateStudentPlacement(departmentId, courseId) {
@@ -100,21 +105,89 @@ function validateStudentFields(body, { partial = false } = {}) {
   }
   return { fields, values };
 }
-
 router.get('/students/options', requireAuth, requireAdmin, async (_req, res) => {
   try {
-    const [departments, courses] = await Promise.all([
-      supabaseAdmin.from('departments').select('id, name, code').eq('status', 'active').order('name'),
-      supabaseAdmin.from('courses').select('id, name, code, department_id').eq('status', 'active').order('name')
-    ]);
-    if (departments.error || courses.error) {
-      console.error('[students] Could not load student department/course options.');
-      return res.status(500).json({ error: 'Could not load departments and courses.' });
+    const [departmentsResult, coursesResult, semestersResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from('departments')
+          .select('id, name, code')
+          .eq('status', 'active')
+          .order('name'),
+
+        supabaseAdmin
+          .from('courses')
+          .select('id, name, code, department_id')
+          .eq('status', 'active')
+          .order('name'),
+
+        supabaseAdmin
+          .from('semesters')
+          .select(`
+            id,
+            semester_number,
+            label,
+            academic_year_id,
+            start_date,
+            end_date,
+            status,
+            academic_year:academic_years (
+              id,
+              year_code,
+              label
+            )
+          `)
+          .eq('status', 'active')
+          .order('semester_number', { ascending: true })
+      ]);
+
+    if (departmentsResult.error) {
+      console.error(
+        '[students/options] Departments query failed:',
+        departmentsResult.error
+      );
+
+      return res.status(500).json({
+        error: 'Could not load departments.'
+      });
     }
-    res.json({ departments: departments.data || [], courses: courses.data || [] });
-  } catch {
-    console.error('[students] Unexpected failure while loading department/course options.');
-    return res.status(500).json({ error: 'Could not load departments and courses.' });
+
+    if (coursesResult.error) {
+      console.error(
+        '[students/options] Courses query failed:',
+        coursesResult.error
+      );
+
+      return res.status(500).json({
+        error: coursesResult.error.message || 'Could not load courses.'
+      });
+    }
+
+    if (semestersResult.error) {
+      console.error(
+        '[students/options] Semesters query failed:',
+        semestersResult.error
+      );
+
+      return res.status(500).json({
+        error: semestersResult.error.message || 'Could not load semesters.'
+      });
+    }
+
+    return res.status(200).json({
+      departments: departmentsResult.data || [],
+      courses: coursesResult.data || [],
+      semesters: semestersResult.data || []
+    });
+  } catch (error) {
+    console.error(
+      '[students/options] Unexpected error:',
+      error
+    );
+
+    return res.status(500).json({
+      error: 'Could not load student form options.'
+    });
   }
 });
 
