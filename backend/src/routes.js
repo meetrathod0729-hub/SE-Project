@@ -6,6 +6,7 @@ import { createStudentProfileHandlers } from './student-profile.js';
 import { createAcademicRouter } from './academic.js';
 import { createFacultyHandlers } from './faculty.js';
 import { createFacultyManagementRouter } from './faculty-management.js';
+import { createFacultyAttendanceRouter } from './faculty-attendance.js';
 
 const router = Router();
 const studentVerification = createStudentVerificationHandlers(supabaseAdmin);
@@ -26,6 +27,10 @@ router.get('/auth/me', requireAuth, (req, res) => {
   });
 });
 router.use('/faculty-management', createFacultyManagementRouter(supabaseAdmin));
+router.use(
+  '/faculty/me/attendance',
+  createFacultyAttendanceRouter(supabaseAdmin)
+);
 
 async function validateStudentPlacement(departmentId, courseId) {
   try {

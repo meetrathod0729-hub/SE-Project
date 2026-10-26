@@ -42,8 +42,15 @@ const RESOURCE_SPECS = {
   },
   courses: {
     table: 'courses',
-    fields: ['department_id', 'name', 'code', 'status', 'faculty_ids'],
-    required: ['department_id', 'name', 'code'],
+    fields: [
+      'department_id',
+      'name',
+      'code',
+      'status',
+      'faculty_ids',
+      'semester_id'
+    ],
+    required: ['department_id', 'name', 'code', 'semester_id'],
     key: 'courses'
   }
 };
@@ -192,6 +199,7 @@ function normalizePayload(resource, body) {
   }
 
   let facultyIds;
+  let semesterId;
 
   if (resource === 'courses') {
     if (Object.hasOwn(body, 'department_id')) {
@@ -215,6 +223,17 @@ function normalizePayload(resource, body) {
       );
     }
 
+    if (Object.hasOwn(body, 'semester_id')) {
+      if (
+        typeof body.semester_id !== 'string' ||
+        !UUID_PATTERN.test(body.semester_id)
+      ) {
+        errors.semester_id = 'Select a valid semester.';
+      } else {
+        semesterId = body.semester_id;
+      }
+    }
+
     if (Object.hasOwn(body, 'faculty_ids')) {
       if (
         !Array.isArray(body.faculty_ids) ||
@@ -231,21 +250,25 @@ function normalizePayload(resource, body) {
     }
   }
 
-  return { errors, values, facultyIds };
+  return { errors, values, facultyIds, semesterId };
 }
 
 function errorResponse(error) {
   if (error?.code === '23505') {
     return {
       status: 409,
-      body: { error: 'An academic record with these unique values already exists.' }
+      body: {
+        error: 'An academic record with these unique values already exists.'
+      }
     };
   }
 
   if (error?.code === '23503' || error?.code === '23514') {
     return {
       status: 400,
-      body: { error: 'The academic record references an invalid or incompatible record.' }
+      body: {
+        error: 'The academic record references an invalid or incompatible record.'
+      }
     };
   }
 
@@ -356,53 +379,122 @@ async function validateReferences(db, resource, values, recordId) {
   }
 
   if (recordId && resource === 'semesters' && values.status === 'inactive') {
-    const { data, error } = await db.from('subject_offerings')
-      .select('id')
-      .eq('semester_id', recordId)
-      .eq('status', 'active')
-      .limit(1)
-      .maybeSingle();
+    const [offerings, courseAssignments] = await Promise.all([
+      db.from('subject_offerings')
+        .select('id')
+        .eq('semester_id', recordId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle(),
+      db.from('course_semester_assignments')
+        .select('id')
+        .eq('semester_id', recordId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+    ]);
 
-    if (error) {
+    if (offerings.error || courseAssignments.error) {
       return {
         status: 500,
-        body: { error: 'Could not check active subject offerings.' }
+        body: { error: 'Could not check active semester assignments.' }
       };
     }
 
-    if (data) {
+    if (offerings.data || courseAssignments.data) {
       return {
         status: 409,
-        body: { error: 'Deactivate this semester’s active subject offerings first.' }
+        body: {
+          error: 'Deactivate this semester’s active offerings and course assignments first.'
+        }
       };
     }
   }
 
   if (recordId && resource === 'courses' && values.status === 'inactive') {
-    const [subjects, offerings, assignments] = await Promise.all([
-      db.from('subjects').select('id')
-        .eq('course_id', recordId).eq('status', 'active').limit(1).maybeSingle(),
-      db.from('subject_offerings').select('id')
-        .eq('course_id', recordId).eq('status', 'active').limit(1).maybeSingle(),
-      db.from('course_faculty_assignments').select('id')
-        .eq('course_id', recordId).eq('status', 'active').limit(1).maybeSingle()
-    ]);
+    const [subjects, offerings, assignments, semesterAssignments] =
+      await Promise.all([
+        db.from('subjects').select('id')
+          .eq('course_id', recordId).eq('status', 'active')
+          .limit(1).maybeSingle(),
+        db.from('subject_offerings').select('id')
+          .eq('course_id', recordId).eq('status', 'active')
+          .limit(1).maybeSingle(),
+        db.from('course_faculty_assignments').select('id')
+          .eq('course_id', recordId).eq('status', 'active')
+          .limit(1).maybeSingle(),
+        db.from('course_semester_assignments').select('id')
+          .eq('course_id', recordId).eq('status', 'active')
+          .limit(1).maybeSingle()
+      ]);
 
-    if (subjects.error || offerings.error || assignments.error) {
+    if (
+      subjects.error || offerings.error ||
+      assignments.error || semesterAssignments.error
+    ) {
       return {
         status: 500,
         body: { error: 'Could not check active course records.' }
       };
     }
 
-    if (subjects.data || offerings.data || assignments.data) {
+    if (
+      subjects.data || offerings.data ||
+      assignments.data || semesterAssignments.data
+    ) {
       return {
         status: 409,
         body: {
-          error: 'Deactivate this course’s active subjects, offerings, and faculty assignments first.'
+          error: 'Deactivate this course’s active subjects, offerings, professor assignments, and semester assignments first.'
         }
       };
     }
+  }
+
+  return null;
+}
+
+async function validateSemesterId(db, semesterId) {
+  if (!semesterId) {
+    return {
+      status: 400,
+      body: {
+        error: 'Select a semester.',
+        fields: { semester_id: 'Semester is required.' }
+      }
+    };
+  }
+
+  const { data, error } = await db.from('semesters')
+    .select('id, status')
+    .eq('id', semesterId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      status: 500,
+      body: { error: 'Could not validate the selected semester.' }
+    };
+  }
+
+  if (!data) {
+    return {
+      status: 400,
+      body: {
+        error: 'The selected semester does not exist.',
+        fields: { semester_id: 'Semester not found.' }
+      }
+    };
+  }
+
+  if (data.status !== 'active') {
+    return {
+      status: 400,
+      body: {
+        error: 'Select an active semester.',
+        fields: { semester_id: 'Semester is inactive.' }
+      }
+    };
   }
 
   return null;
@@ -475,6 +567,34 @@ async function syncCourseFaculty(db, courseId, facultyIds) {
   return { error: upsertError || null };
 }
 
+async function syncCourseSemester(db, courseId, semesterId) {
+  if (semesterId === undefined) return { error: null };
+
+  const { error } = await db
+    .from('course_semester_assignments')
+    .upsert(
+      {
+        course_id: courseId,
+        semester_id: semesterId,
+        status: 'active',
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'course_id,semester_id' }
+    );
+
+  if (error) return { error };
+
+  // Keep only the selected semester active for this course.
+  const { error: deactivateError } = await db
+    .from('course_semester_assignments')
+    .update({ status: 'inactive', updated_at: new Date().toISOString() })
+    .eq('course_id', courseId)
+    .neq('semester_id', semesterId)
+    .eq('status', 'active');
+
+  return { error: deactivateError || null };
+}
+
 export function createAcademicRouter(
   db,
   authorization = {
@@ -483,6 +603,7 @@ export function createAcademicRouter(
   }
 ) {
   const router = Router();
+
   router.use(
     authorization.requireAuthMiddleware,
     authorization.requireAdminMiddleware
@@ -496,7 +617,8 @@ export function createAcademicRouter(
         departments,
         courses,
         faculty,
-        assignments
+        assignments,
+        semesterAssignments
       ] = await Promise.all([
         db.from('academic_years')
           .select('*')
@@ -515,22 +637,35 @@ export function createAcademicRouter(
           .order('full_name'),
         db.from('course_faculty_assignments')
           .select('id, course_id, faculty_id, status')
+          .eq('status', 'active'),
+        db.from('course_semester_assignments')
+          .select('id, course_id, semester_id, status')
           .eq('status', 'active')
       ]);
 
       const failed = [
-        years, semesters, departments, courses, faculty, assignments
+        years,
+        semesters,
+        departments,
+        courses,
+        faculty,
+        assignments,
+        semesterAssignments
       ].find(result => result.error);
 
       if (failed) {
         console.error('[academic] List query failed:', failed.error?.message);
         return res.status(500).json({
-          error: 'Could not load academic management data. Verify that migration 010 has been applied.'
+          error: 'Could not load academic management data. Verify that migrations 010 and 012 have been applied.'
         });
       }
 
       const facultyById = new Map(
         (faculty.data || []).map(person => [person.id, person])
+      );
+
+      const semestersById = new Map(
+        (semesters.data || []).map(semester => [semester.id, semester])
       );
 
       const assignmentsByCourse = new Map();
@@ -540,25 +675,47 @@ export function createAcademicRouter(
         if (!person) continue;
 
         const list = assignmentsByCourse.get(assignment.course_id) || [];
+
         list.push({
           ...person,
           assignment_id: assignment.id,
           assignment_status: assignment.status
         });
+
         assignmentsByCourse.set(assignment.course_id, list);
       }
 
-      const coursesWithFaculty = (courses.data || []).map(course => ({
-        ...course,
-        professors: assignmentsByCourse.get(course.id) || [],
-        faculty_ids: (assignmentsByCourse.get(course.id) || []).map(person => person.id)
-      }));
+      const semesterByCourse = new Map();
+
+      for (const assignment of semesterAssignments.data || []) {
+        const semester = semestersById.get(assignment.semester_id);
+        if (!semester) continue;
+
+        semesterByCourse.set(assignment.course_id, {
+          ...semester,
+          assignment_id: assignment.id,
+          assignment_status: assignment.status
+        });
+      }
+
+      const coursesWithAssignments = (courses.data || []).map(course => {
+        const professors = assignmentsByCourse.get(course.id) || [];
+        const semester = semesterByCourse.get(course.id) || null;
+
+        return {
+          ...course,
+          professors,
+          faculty_ids: professors.map(person => person.id),
+          semester,
+          semester_id: semester?.id || ''
+        };
+      });
 
       res.json({
         academic_years: years.data || [],
         semesters: semesters.data || [],
         departments: departments.data || [],
-        courses: coursesWithFaculty,
+        courses: coursesWithAssignments,
         faculty: faculty.data || []
       });
     } catch (error) {
@@ -569,7 +726,8 @@ export function createAcademicRouter(
 
   for (const [resource, spec] of Object.entries(RESOURCE_SPECS)) {
     router.post(`/${resource}`, async (req, res) => {
-      const { errors, values, facultyIds } = normalizePayload(resource, req.body);
+      const { errors, values, facultyIds, semesterId } =
+        normalizePayload(resource, req.body);
 
       if (Object.keys(errors).length) {
         return res.status(400).json({
@@ -582,11 +740,17 @@ export function createAcademicRouter(
         const referenceError = await validateReferences(
           db, resource, values, undefined
         );
+
         if (referenceError) {
           return res.status(referenceError.status).json(referenceError.body);
         }
 
         if (resource === 'courses') {
+          const semesterError = await validateSemesterId(db, semesterId);
+          if (semesterError) {
+            return res.status(semesterError.status).json(semesterError.body);
+          }
+
           const facultyError = await validateFacultyIds(db, facultyIds);
           if (facultyError) {
             return res.status(facultyError.status).json(facultyError.body);
@@ -603,19 +767,37 @@ export function createAcademicRouter(
           return res.status(result.status).json(result.body);
         }
 
-        if (resource === 'courses' && facultyIds !== undefined) {
-          const result = await syncCourseFaculty(db, data.id, facultyIds);
+        if (resource === 'courses') {
+          const semesterResult = await syncCourseSemester(
+            db, data.id, semesterId
+          );
 
-          if (result.error) {
-            console.error('[academic] Course saved but faculty assignment sync failed:', result.error.message);
+          if (semesterResult.error) {
+            console.error('[academic] Course saved but semester assignment failed:', semesterResult.error.message);
             await db.from('courses').delete().eq('id', data.id);
+
             return res.status(500).json({
-              error: 'Could not save the professor assignments. The course creation was rolled back where possible.'
+              error: 'Could not save the course semester assignment. The course creation was rolled back where possible.'
             });
+          }
+
+          if (facultyIds !== undefined) {
+            const facultyResult = await syncCourseFaculty(db, data.id, facultyIds);
+
+            if (facultyResult.error) {
+              console.error('[academic] Course saved but faculty assignment failed:', facultyResult.error.message);
+              await db.from('courses').delete().eq('id', data.id);
+
+              return res.status(500).json({
+                error: 'Could not save the professor assignments. The course creation was rolled back where possible.'
+              });
+            }
           }
         }
 
-        return res.status(201).json({ [spec.key === 'courses' ? 'course' : resource]: data });
+        return res.status(201).json({
+          [spec.key === 'courses' ? 'course' : resource]: data
+        });
       } catch (error) {
         const result = errorResponse(error);
         return res.status(result.status).json(result.body);
@@ -627,7 +809,8 @@ export function createAcademicRouter(
         return res.status(400).json({ error: 'Invalid academic record ID.' });
       }
 
-      const { errors, values, facultyIds } = normalizePayload(resource, req.body);
+      const { errors, values, facultyIds, semesterId } =
+        normalizePayload(resource, req.body);
 
       if (Object.keys(errors).length) {
         return res.status(400).json({
@@ -640,11 +823,17 @@ export function createAcademicRouter(
         const referenceError = await validateReferences(
           db, resource, values, req.params.id
         );
+
         if (referenceError) {
           return res.status(referenceError.status).json(referenceError.body);
         }
 
         if (resource === 'courses') {
+          const semesterError = await validateSemesterId(db, semesterId);
+          if (semesterError) {
+            return res.status(semesterError.status).json(semesterError.body);
+          }
+
           const facultyError = await validateFacultyIds(db, facultyIds);
           if (facultyError) {
             return res.status(facultyError.status).json(facultyError.body);
@@ -666,18 +855,33 @@ export function createAcademicRouter(
           return res.status(404).json({ error: 'Academic record not found.' });
         }
 
-        if (resource === 'courses' && facultyIds !== undefined) {
-          const result = await syncCourseFaculty(db, data.id, facultyIds);
+        if (resource === 'courses') {
+          const semesterResult = await syncCourseSemester(
+            db, data.id, semesterId
+          );
 
-          if (result.error) {
-            console.error('[academic] Course updated but faculty assignment sync failed:', result.error.message);
+          if (semesterResult.error) {
+            console.error('[academic] Course updated but semester assignment failed:', semesterResult.error.message);
             return res.status(500).json({
-              error: 'Course was saved, but professor assignments could not be updated. Please retry.'
+              error: 'Course was saved, but its semester assignment could not be updated.'
             });
+          }
+
+          if (facultyIds !== undefined) {
+            const facultyResult = await syncCourseFaculty(db, data.id, facultyIds);
+
+            if (facultyResult.error) {
+              console.error('[academic] Course updated but faculty assignment failed:', facultyResult.error.message);
+              return res.status(500).json({
+                error: 'Course was saved, but professor assignments could not be updated. Please retry.'
+              });
+            }
           }
         }
 
-        return res.json({ [spec.key === 'courses' ? 'course' : resource]: data });
+        return res.json({
+          [spec.key === 'courses' ? 'course' : resource]: data
+        });
       } catch (error) {
         const result = errorResponse(error);
         return res.status(result.status).json(result.body);

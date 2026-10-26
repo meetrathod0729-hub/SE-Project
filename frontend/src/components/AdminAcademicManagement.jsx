@@ -11,10 +11,30 @@ import {
 import { apiRequest } from '../lib/api';
 
 const SECTIONS = [
-  { key: 'years', title: 'Academic Years', dataKey: 'academic_years', label: 'Academic year' },
-  { key: 'semesters', title: 'Semesters', dataKey: 'semesters', label: 'Semester' },
-  { key: 'departments', title: 'Departments', dataKey: 'departments', label: 'Department' },
-  { key: 'courses', title: 'Courses / Programs', dataKey: 'courses', label: 'Course' }
+  {
+    key: 'years',
+    title: 'Academic Years',
+    dataKey: 'academic_years',
+    label: 'Academic year'
+  },
+  {
+    key: 'semesters',
+    title: 'Semesters',
+    dataKey: 'semesters',
+    label: 'Semester'
+  },
+  {
+    key: 'departments',
+    title: 'Departments',
+    dataKey: 'departments',
+    label: 'Department'
+  },
+  {
+    key: 'courses',
+    title: 'Courses / Programs',
+    dataKey: 'courses',
+    label: 'Course'
+  }
 ];
 
 const EMPTY_DATA = {
@@ -28,7 +48,13 @@ const EMPTY_DATA = {
 function emptyForm(section) {
   switch (section) {
     case 'years':
-      return { year_code: '', label: '', start_date: '', end_date: '' };
+      return {
+        year_code: '',
+        label: '',
+        start_date: '',
+        end_date: ''
+      };
+
     case 'semesters':
       return {
         academic_year_id: '',
@@ -37,10 +63,22 @@ function emptyForm(section) {
         start_date: '',
         end_date: ''
       };
+
     case 'departments':
-      return { name: '', code: '' };
+      return {
+        name: '',
+        code: ''
+      };
+
     case 'courses':
-      return { department_id: '', name: '', code: '', faculty_ids: [] };
+      return {
+        department_id: '',
+        semester_id: '',
+        name: '',
+        code: '',
+        faculty_ids: []
+      };
+
     default:
       return {};
   }
@@ -56,6 +94,7 @@ function recordForm(section, item) {
         end_date: item.end_date,
         status: item.status
       };
+
     case 'semesters':
       return {
         academic_year_id: item.academic_year_id,
@@ -65,31 +104,63 @@ function recordForm(section, item) {
         end_date: item.end_date,
         status: item.status
       };
+
     case 'departments':
-      return { name: item.name, code: item.code, status: item.status };
+      return {
+        name: item.name,
+        code: item.code,
+        status: item.status
+      };
+
     case 'courses':
       return {
         department_id: item.department_id,
+        semester_id: item.semester_id || item.semester?.id || '',
         name: item.name,
         code: item.code,
-        faculty_ids: item.faculty_ids || item.professors?.map(person => person.id) || [],
+        faculty_ids:
+          item.faculty_ids ||
+          item.professors?.map(person => person.id) ||
+          [],
         status: item.status
       };
+
     default:
       return {};
   }
+}
+
+function semesterLabel(semester) {
+  if (!semester) return 'No semester assigned';
+
+  const yearLabel =
+    semester.academic_year?.label ||
+    semester.academic_year?.year_code ||
+    '';
+
+  const label =
+    semester.label ||
+    (semester.semester_number
+      ? `Semester ${semester.semester_number}`
+      : 'Semester');
+
+  return yearLabel ? `${yearLabel} — ${label}` : label;
 }
 
 function rowLabel(section, item) {
   switch (section) {
     case 'years':
       return `${item.label} (${item.year_code})`;
+
     case 'semesters':
       return `${item.academic_year?.label || 'Academic year'} — ${item.label}`;
+
     case 'departments':
       return `${item.name} (${item.code})`;
+
     case 'courses':
       return `${item.name} (${item.code})`;
+
     default:
       return item.id;
   }
@@ -107,7 +178,10 @@ function AcademicFields({ section, form, data, errors, onChange }) {
           aria-invalid={Boolean(errors[name])}
           onChange={event => onChange(name, event.target.value)}
         >
-          <option value="">Select {label.toLowerCase()}</option>
+          <option value="">
+            Select {label.toLowerCase()}
+          </option>
+
           {options.items.map(item => (
             <option key={item.id} value={item.id}>
               {options.label(item)}
@@ -129,17 +203,33 @@ function AcademicFields({ section, form, data, errors, onChange }) {
       )}
 
       {errors[name] && (
-        <small className="field-error">{errors[name]}</small>
+        <small className="field-error">
+          {errors[name]}
+        </small>
       )}
     </label>
+  );
+
+  const activeSemesters = data.semesters.filter(
+    semester => semester.status === 'active'
+  );
+
+  const activeFaculty = data.faculty.filter(
+    person => person.status === 'active'
   );
 
   return (
     <>
       {section === 'years' && (
         <>
-          {field('year_code', 'Year code', 'text', { maxLength: 30 })}
-          {field('label', 'Display label', 'text', { maxLength: 100 })}
+          {field('year_code', 'Year code', 'text', {
+            maxLength: 30
+          })}
+
+          {field('label', 'Display label', 'text', {
+            maxLength: 100
+          })}
+
           {field('start_date', 'Start date', 'date')}
           {field('end_date', 'End date', 'date')}
         </>
@@ -148,13 +238,22 @@ function AcademicFields({ section, form, data, errors, onChange }) {
       {section === 'semesters' && (
         <>
           {field('academic_year_id', 'Academic year', 'select', {
-            items: data.academic_years.filter(item => item.status === 'active'),
+            items: data.academic_years.filter(
+              item => item.status === 'active'
+            ),
             label: item => `${item.label} (${item.year_code})`
           })}
+
           {field('semester_number', 'Semester number', 'number', {
-            min: 1, max: 50, step: 1
+            min: 1,
+            max: 50,
+            step: 1
           })}
-          {field('label', 'Semester label', 'text', { maxLength: 100 })}
+
+          {field('label', 'Semester label', 'text', {
+            maxLength: 100
+          })}
+
           {field('start_date', 'Start date', 'date')}
           {field('end_date', 'End date', 'date')}
         </>
@@ -162,26 +261,68 @@ function AcademicFields({ section, form, data, errors, onChange }) {
 
       {section === 'departments' && (
         <>
-          {field('name', 'Department name', 'text', { maxLength: 120 })}
-          {field('code', 'Department code', 'text', { maxLength: 30 })}
+          {field('name', 'Department name', 'text', {
+            maxLength: 120
+          })}
+
+          {field('code', 'Department code', 'text', {
+            maxLength: 30
+          })}
         </>
       )}
 
       {section === 'courses' && (
         <>
           {field('department_id', 'Department', 'select', {
-            items: data.departments.filter(item => item.status === 'active'),
+            items: data.departments.filter(
+              item => item.status === 'active'
+            ),
             label: item => `${item.name} (${item.code})`
           })}
+
+          {/* NEW: Semester assignment */}
+          {field('semester_id', 'Semester', 'select', {
+            items: activeSemesters,
+            label: semester => {
+              const academicYear =
+                semester.academic_year?.label ||
+                semester.academic_year?.year_code;
+
+              const label =
+                semester.label ||
+                `Semester ${semester.semester_number}`;
+
+              return academicYear
+                ? `${academicYear} — ${label}`
+                : label;
+            }
+          })}
+
+          {errors.semester_id && (
+            <small className="field-error">
+              {errors.semester_id}
+            </small>
+          )}
+
+          {activeSemesters.length === 0 && (
+            <div className="alert">
+              No active semesters are available. Create an academic year
+              and an active semester before creating a course.
+            </div>
+          )}
 
           {field('name', 'Course / program name', 'text', {
             maxLength: 120
           })}
 
-          {field('code', 'Course code', 'text', { maxLength: 30 })}
+          {field('code', 'Course code', 'text', {
+            maxLength: 30
+          })}
 
+          {/* Multi-professor assignment */}
           <label className="academic-field faculty-multiselect-field">
             <span>Professor(s)</span>
+
             <small className="academic-secondary">
               Select one or more active faculty members for this course.
             </small>
@@ -193,22 +334,25 @@ function AcademicFields({ section, form, data, errors, onChange }) {
               onChange={event => {
                 onChange(
                   'faculty_ids',
-                  Array.from(event.target.selectedOptions, option => option.value)
+                  Array.from(
+                    event.target.selectedOptions,
+                    option => option.value
+                  )
                 );
               }}
               size={Math.min(
                 6,
-                Math.max(3, data.faculty.filter(item => item.status === 'active').length)
+                Math.max(3, activeFaculty.length)
               )}
             >
-              {data.faculty
-                .filter(item => item.status === 'active')
-                .map(person => (
-                  <option key={person.id} value={person.id}>
-                    {person.full_name} — {person.designation || 'Faculty'}
-                    {person.faculty_code ? ` (${person.faculty_code})` : ''}
-                  </option>
-                ))}
+              {activeFaculty.map(person => (
+                <option key={person.id} value={person.id}>
+                  {person.full_name} — {person.designation || 'Faculty'}
+                  {person.faculty_code
+                    ? ` (${person.faculty_code})`
+                    : ''}
+                </option>
+              ))}
             </select>
 
             <small className="academic-secondary">
@@ -216,44 +360,59 @@ function AcademicFields({ section, form, data, errors, onChange }) {
             </small>
 
             {errors.faculty_ids && (
-              <small className="field-error">{errors.faculty_ids}</small>
+              <small className="field-error">
+                {errors.faculty_ids}
+              </small>
             )}
           </label>
 
-          {Array.isArray(form.faculty_ids) && form.faculty_ids.length > 0 && (
-            <div className="selected-professors">
-              <strong>
-                Selected professors ({form.faculty_ids.length})
-              </strong>
-              <div className="selected-professor-list">
-                {form.faculty_ids.map(id => {
-                  const person = data.faculty.find(item => item.id === id);
-                  if (!person) return null;
+          {Array.isArray(form.faculty_ids) &&
+            form.faculty_ids.length > 0 && (
+              <div className="selected-professors">
+                <strong>
+                  Selected professors ({form.faculty_ids.length})
+                </strong>
 
-                  return (
-                    <span key={id} className="selected-professor-chip">
-                      {person.full_name}
-                      <button
-                        type="button"
-                        aria-label={`Remove ${person.full_name}`}
-                        onClick={() => onChange(
-                          'faculty_ids',
-                          form.faculty_ids.filter(value => value !== id)
-                        )}
+                <div className="selected-professor-list">
+                  {form.faculty_ids.map(id => {
+                    const person = data.faculty.find(
+                      item => item.id === id
+                    );
+
+                    if (!person) return null;
+
+                    return (
+                      <span
+                        key={id}
+                        className="selected-professor-chip"
                       >
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                        {person.full_name}
 
-          {data.faculty.filter(item => item.status === 'active').length === 0 && (
+                        <button
+                          type="button"
+                          aria-label={`Remove ${person.full_name}`}
+                          onClick={() =>
+                            onChange(
+                              'faculty_ids',
+                              form.faculty_ids.filter(
+                                value => value !== id
+                              )
+                            )
+                          }
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          {activeFaculty.length === 0 && (
             <div className="alert">
-              No active faculty accounts are available. Create faculty accounts
-              in Faculty Management first.
+              No active faculty accounts are available. Create faculty
+              accounts in Faculty Management first.
             </div>
           )}
         </>
@@ -262,6 +421,7 @@ function AcademicFields({ section, form, data, errors, onChange }) {
       {Object.hasOwn(form, 'status') && (
         <label className="academic-field">
           <span>Status</span>
+
           <select
             value={form.status}
             onChange={event => onChange('status', event.target.value)}
@@ -288,6 +448,7 @@ export default function AdminAcademicManagement({ token }) {
 
   const loadData = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
+
     setError('');
 
     try {
@@ -304,7 +465,10 @@ export default function AdminAcademicManagement({ token }) {
     loadData();
   }, [loadData]);
 
-  const section = SECTIONS.find(item => item.key === activeSection);
+  const section = SECTIONS.find(
+    item => item.key === activeSection
+  );
+
   const rows = data[section.dataKey] || [];
 
   function selectSection(key) {
@@ -317,8 +481,15 @@ export default function AdminAcademicManagement({ token }) {
   }
 
   function changeField(name, value) {
-    setForm(current => ({ ...current, [name]: value }));
-    setFieldErrors(current => ({ ...current, [name]: '' }));
+    setForm(current => ({
+      ...current,
+      [name]: value
+    }));
+
+    setFieldErrors(current => ({
+      ...current,
+      [name]: ''
+    }));
   }
 
   function startEdit(item) {
@@ -333,10 +504,13 @@ export default function AdminAcademicManagement({ token }) {
     setEditing(null);
     setForm(emptyForm(activeSection));
     setFieldErrors({});
+    setError('');
+    setMessage('');
   }
 
   async function saveRecord(event) {
     event.preventDefault();
+
     setSaving(true);
     setError('');
     setMessage('');
@@ -357,8 +531,10 @@ export default function AdminAcademicManagement({ token }) {
       setMessage(
         `${section.label} ${editing ? 'updated' : 'created'} successfully.`
       );
+
       setForm(emptyForm(activeSection));
       setEditing(null);
+
       await loadData({ silent: true });
     } catch (e) {
       setError(e.message || 'Could not save the academic record.');
@@ -369,7 +545,8 @@ export default function AdminAcademicManagement({ token }) {
   }
 
   async function toggleStatus(item) {
-    const nextStatus = item.status === 'active' ? 'inactive' : 'active';
+    const nextStatus =
+      item.status === 'active' ? 'inactive' : 'active';
 
     if (
       nextStatus === 'inactive' &&
@@ -389,15 +566,25 @@ export default function AdminAcademicManagement({ token }) {
     setMessage('');
 
     try {
-      await apiRequest(`/academic/${activeSection}/${item.id}`, {
-        token,
-        method: 'PATCH',
-        body: JSON.stringify(payload)
-      });
+      await apiRequest(
+        `/academic/${activeSection}/${item.id}`,
+        {
+          token,
+          method: 'PATCH',
+          body: JSON.stringify(payload)
+        }
+      );
 
       setMessage(
-        `${section.label} ${nextStatus === 'active' ? 'reactivated' : 'deactivated'}.`
+        `${section.label} ${nextStatus === 'active' ? 'reactivated' : 'deactivated'
+        } successfully.`
       );
+
+      if (editing?.id === item.id) {
+        setEditing(null);
+        setForm(emptyForm(activeSection));
+      }
+
       await loadData({ silent: true });
     } catch (e) {
       setError(e.message || 'Could not update the record status.');
@@ -410,14 +597,15 @@ export default function AdminAcademicManagement({ token }) {
         <div>
           <h2>Academic Management</h2>
           <p className="muted">
-            Manage academic years, semesters, departments, courses, and assigned professors.
+            Manage academic years, semesters, departments, courses,
+            and assigned professors.
           </p>
         </div>
 
         <button
           type="button"
           className="secondary-button"
-          disabled={loading}
+          disabled={loading || saving}
           onClick={() => loadData()}
         >
           <RefreshCw size={15} />
@@ -438,13 +626,19 @@ export default function AdminAcademicManagement({ token }) {
         </div>
       )}
 
-      <nav className="academic-tabs" aria-label="Academic record types">
+      <nav
+        className="academic-tabs"
+        aria-label="Academic record types"
+      >
         {SECTIONS.map(item => (
           <button
             key={item.key}
             type="button"
-            aria-current={activeSection === item.key ? 'page' : undefined}
-            className={`academic-tab ${activeSection === item.key ? 'active' : ''}`}
+            aria-current={
+              activeSection === item.key ? 'page' : undefined
+            }
+            className={`academic-tab ${activeSection === item.key ? 'active' : ''
+              }`}
             onClick={() => selectSection(item.key)}
           >
             {item.title}
@@ -481,7 +675,16 @@ export default function AdminAcademicManagement({ token }) {
             <button
               type="submit"
               className="primary-button admin-submit-button"
-              disabled={saving || loading}
+              disabled={
+                saving ||
+                loading ||
+                (
+                  activeSection === 'courses' &&
+                  data.semesters.filter(
+                    semester => semester.status === 'active'
+                  ).length === 0
+                )
+              }
             >
               {saving ? (
                 'Saving…'
@@ -514,7 +717,14 @@ export default function AdminAcademicManagement({ token }) {
                 <thead>
                   <tr>
                     <th>Record</th>
-                    {activeSection === 'courses' && <th>Professor(s)</th>}
+
+                    {activeSection === 'courses' && (
+                      <>
+                        <th>Semester</th>
+                        <th>Professor(s)</th>
+                      </>
+                    )}
+
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -524,7 +734,10 @@ export default function AdminAcademicManagement({ token }) {
                   {rows.map(item => (
                     <tr key={item.id}>
                       <td>
-                        <strong>{rowLabel(activeSection, item)}</strong>
+                        <strong>
+                          {rowLabel(activeSection, item)}
+                        </strong>
+
                         {activeSection === 'courses' && item.department && (
                           <small className="academic-secondary">
                             {item.department.name} ({item.department.code})
@@ -533,30 +746,42 @@ export default function AdminAcademicManagement({ token }) {
                       </td>
 
                       {activeSection === 'courses' && (
-                        <td>
-                          {item.professors?.length ? (
-                            <div className="course-professor-list">
-                              {item.professors.map(person => (
-                                <span
-                                  key={person.id}
-                                  className="course-professor-chip"
-                                >
-                                  <Users size={13} />
-                                  {person.full_name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="academic-secondary">
-                              No professors assigned
+                        <>
+                          <td>
+                            <span className="course-semester-label">
+                              <CalendarDays size={14} />
+                              {semesterLabel(item.semester)}
                             </span>
-                          )}
-                        </td>
+                          </td>
+
+                          <td>
+                            {item.professors?.length ? (
+                              <div className="course-professor-list">
+                                {item.professors.map(person => (
+                                  <span
+                                    key={person.id}
+                                    className="course-professor-chip"
+                                  >
+                                    <Users size={13} />
+                                    {person.full_name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="academic-secondary">
+                                No professors assigned
+                              </span>
+                            )}
+                          </td>
+                        </>
                       )}
 
                       <td>
                         <span
-                          className={`status-pill ${item.status === 'active' ? 'active-status' : 'pending'}`}
+                          className={`status-pill ${item.status === 'active'
+                            ? 'active-status'
+                            : 'pending'
+                            }`}
                         >
                           {item.status}
                         </span>
@@ -581,7 +806,9 @@ export default function AdminAcademicManagement({ token }) {
                             }
                             onClick={() => toggleStatus(item)}
                           >
-                            {item.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                            {item.status === 'active'
+                              ? 'Deactivate'
+                              : 'Reactivate'}
                           </button>
                         </div>
                       </td>
@@ -593,9 +820,12 @@ export default function AdminAcademicManagement({ token }) {
           ) : (
             <div className="empty-state">
               <BookOpen size={24} />
-              <strong>No {section.title.toLowerCase()} yet</strong>
+              <strong>
+                No {section.title.toLowerCase()} yet
+              </strong>
               <span>
-                Add actual university records here. No sample records are generated automatically.
+                Add actual university records here. No sample records
+                are generated automatically.
               </span>
             </div>
           )}
@@ -605,7 +835,8 @@ export default function AdminAcademicManagement({ token }) {
       <div className="academic-model-note">
         <CalendarDays size={16} />
         <span>
-          Each course can have multiple professors. Assignments are saved in Supabase
+          Each course is associated with a semester and can have
+          multiple professors. Assignments are saved in Supabase
           and displayed in the assigned professors’ Faculty Dashboards.
         </span>
       </div>

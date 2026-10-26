@@ -8,9 +8,11 @@ import {
   GraduationCap,
   RefreshCw,
   UserRound,
-  Users
+  Users,
+  ClipboardCheck
 } from 'lucide-react';
 import { apiRequest } from '../lib/api';
+import FacultyAttendance from './FacultyAttendance';
 
 function SummaryCard({ icon: Icon, label, value, description, tone }) {
   return (
@@ -18,7 +20,6 @@ function SummaryCard({ icon: Icon, label, value, description, tone }) {
       <div className={`faculty-overview-icon ${tone}`}>
         <Icon size={21} />
       </div>
-
       <div className="faculty-overview-content">
         <span>{label}</span>
         <strong>{value}</strong>
@@ -51,7 +52,7 @@ export default function FacultyDashboard({ token }) {
       setData(result);
     } catch (requestError) {
       setError(
-        requestError.message || 'Could not load the faculty dashboard.'
+        requestError?.message || 'Could not load the faculty dashboard.'
       );
     } finally {
       setLoading(false);
@@ -68,7 +69,9 @@ export default function FacultyDashboard({ token }) {
         <div className="empty-state">
           <RefreshCw size={24} />
           <strong>Loading faculty workspace</strong>
-          <span>Retrieving your faculty profile and course assignments.</span>
+          <span>
+            Retrieving your faculty profile and course assignments.
+          </span>
         </div>
       </section>
     );
@@ -118,6 +121,7 @@ export default function FacultyDashboard({ token }) {
 
   return (
     <section className="faculty-dashboard">
+      {/* Faculty welcome section */}
       <section className="faculty-hero">
         <div className="faculty-hero-copy">
           <span className="faculty-eyebrow">FACULTY WORKSPACE</span>
@@ -127,8 +131,8 @@ export default function FacultyDashboard({ token }) {
           </h2>
 
           <p>
-            View your assigned courses and manage your academic responsibilities
-            from your faculty workspace.
+            View your assigned courses and manage your academic
+            responsibilities from your faculty workspace.
           </p>
 
           <div className="faculty-hero-meta">
@@ -149,6 +153,7 @@ export default function FacultyDashboard({ token }) {
         </div>
       </section>
 
+      {/* Overview cards */}
       <section className="faculty-overview-grid">
         <SummaryCard
           icon={UserRound}
@@ -175,6 +180,7 @@ export default function FacultyDashboard({ token }) {
         />
       </section>
 
+      {/* Faculty profile */}
       <section className="panel faculty-profile-panel">
         <div className="faculty-section-heading">
           <div className="faculty-section-title">
@@ -205,22 +211,27 @@ export default function FacultyDashboard({ token }) {
             label="Faculty ID"
             value={faculty.faculty_code}
           />
+
           <ProfileDetail
             label="Full name"
             value={faculty.full_name}
           />
+
           <ProfileDetail
             label="Email address"
             value={faculty.email}
           />
+
           <ProfileDetail
             label="Designation"
             value={faculty.designation}
           />
+
           <ProfileDetail
             label="Department"
             value={faculty.department?.name}
           />
+
           <ProfileDetail
             label="Account status"
             value={faculty.status}
@@ -228,6 +239,7 @@ export default function FacultyDashboard({ token }) {
         </div>
       </section>
 
+      {/* Assigned courses */}
       <section className="panel faculty-subject-panel">
         <div className="faculty-section-heading">
           <div className="faculty-section-title">
@@ -295,7 +307,9 @@ export default function FacultyDashboard({ token }) {
                       <Users size={15} />
                       Assigned faculty
                     </span>
-                    <span className="faculty-course-status-text">Assigned</span>
+                    <span className="faculty-course-status-text">
+                      Assigned
+                    </span>
                   </div>
                 </article>
               ))}
@@ -349,6 +363,26 @@ export default function FacultyDashboard({ token }) {
             </div>
           </div>
         )}
+      </section>
+
+      {/* NEW: Faculty attendance management */}
+      <section className="faculty-attendance-section">
+        <div className="faculty-section-heading">
+          <div className="faculty-section-title">
+            <div className="faculty-section-icon">
+              <ClipboardCheck size={20} />
+            </div>
+
+            <div>
+              <h2>Attendance Management</h2>
+              <p className="muted">
+                Record, review, and submit attendance for your enrolled students.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <FacultyAttendance token={token} />
       </section>
     </section>
   );
