@@ -1,30 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  BookOpen,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
-  ShieldCheck,
-  Users,
-  UserRound,
-  RefreshCw,
-  CircleAlert,
-  CheckCircle2,
-  Clock3,
-  Shield,
-  UserPlus,
-  X,
-  Search,
-  Eye,
-  Pencil,
-  UserRoundPlus,
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  ClipboardCheck,
-  Building2,
-  Sun,
-  Moon
+  BookOpen, GraduationCap, LayoutDashboard, LogOut, ShieldCheck,
+  Users, UserRound, RefreshCw, CircleAlert, CheckCircle2, Clock3, Shield,
+  UserPlus, X, Search, Eye, Pencil, UserRoundPlus, ChevronLeft, ChevronRight,
+  CalendarDays, ClipboardCheck, Building2, Sun, Moon
 } from 'lucide-react';
 import { supabase, supabaseConfigured } from './lib/supabase';
 import { apiRequest } from './lib/api';
@@ -35,9 +14,7 @@ import FacultyManagement from './components/FacultyManagement';
 function Brand() {
   return (
     <div className="brand">
-      <div className="brand-mark">
-        <GraduationCap size={23} />
-      </div>
+      <div className="brand-mark"><GraduationCap size={23} /></div>
       <div>
         <strong>CampusFlow</strong>
         <small>University Automation System</small>
@@ -68,47 +45,14 @@ function emptyStudentForm() {
   return {
     full_name: '',
     email: '',
+    password: '',
+    confirm_password: '',
     phone: '',
     department_id: '',
     course_id: '',
     admission_year: '',
     enrollments: []
   };
-}
-
-function addStudentEnrollment(enrollments) {
-  return [
-    ...enrollments,
-    {
-      course_id: '',
-      semester_id: ''
-    }
-  ];
-}
-
-function updateStudentEnrollment(enrollments, index, field, value) {
-  return enrollments.map((enrollment, enrollmentIndex) =>
-    enrollmentIndex === index
-      ? {
-        ...enrollment,
-        [field]: value,
-        ...(field === 'course_id' ? { semester_id: '' } : {})
-      }
-      : enrollment
-  );
-}
-
-function removeStudentEnrollment(enrollments, index) {
-  return enrollments.filter(
-    (_, enrollmentIndex) => enrollmentIndex !== index
-  );
-}
-
-function normalizeEnrollments(enrollments = []) {
-  return enrollments.map(enrollment => ({
-    course_id: enrollment.course_id || '',
-    semester_id: enrollment.semester_id || ''
-  }));
 }
 
 export default function App() {
@@ -140,7 +84,6 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [view, setView] = useState('dashboard');
-
   const [studentRecord, setStudentRecord] = useState(null);
   const [studentRecordLoading, setStudentRecordLoading] = useState(false);
   const [studentRecordError, setStudentRecordError] = useState('');
@@ -148,7 +91,6 @@ export default function App() {
   const [phoneError, setPhoneError] = useState('');
   const [phoneMessage, setPhoneMessage] = useState('');
   const [phoneSaving, setPhoneSaving] = useState(false);
-
   const [mode, setMode] = useState('login');
   const [authRole, setAuthRole] = useState('student');
   const [email, setEmail] = useState('');
@@ -160,7 +102,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [data, setData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
-
   const [admins, setAdmins] = useState(null);
   const [adminsLoading, setAdminsLoading] = useState(false);
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
@@ -172,7 +113,6 @@ export default function App() {
     confirmPassword: ''
   });
   const [adminFieldErrors, setAdminFieldErrors] = useState({});
-
   const [students, setStudents] = useState([]);
   const [studentTotal, setStudentTotal] = useState(0);
   const [studentFilteredTotal, setStudentFilteredTotal] = useState(0);
@@ -184,7 +124,6 @@ export default function App() {
     course_id: '',
     status: ''
   });
-
   const [studentOptions, setStudentOptions] = useState({
     departments: [],
     courses: [],
@@ -194,7 +133,6 @@ export default function App() {
   const [studentOptionsError, setStudentOptionsError] = useState('');
   const [studentsError, setStudentsError] = useState('');
   const studentRequestId = useRef(0);
-
   const [studentModal, setStudentModal] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentForm, setStudentForm] = useState(emptyStudentForm());
@@ -245,9 +183,7 @@ export default function App() {
     setStudentRecordLoading(true);
     setStudentRecordError('');
 
-    apiRequest('/profile/me', {
-      token: session.access_token
-    })
+    apiRequest('/profile/me', { token: session.access_token })
       .then(result => {
         if (!cancelled) {
           setStudentRecord(result.student);
@@ -499,15 +435,8 @@ export default function App() {
         courses: result.courses || [],
         semesters: result.semesters || []
       });
-
-      if (!result.semesters?.length) {
-        setStudentOptionsError(
-          'No semesters were returned by /students/options. Check the backend API and semester records.'
-        );
-      }
     } catch (e) {
       setStudentOptionsError(e.message);
-
       setStudentOptions({
         departments: [],
         courses: [],
@@ -589,62 +518,83 @@ export default function App() {
     setStudentModal('add');
   }
 
+  function addStudentEnrollment() {
+    setStudentForm(current => ({
+      ...current,
+      enrollments: [...current.enrollments, { course_id: '', semester_id: '' }]
+    }));
+  }
+
+  function updateStudentEnrollment(index, field, value) {
+    setStudentForm(current => ({
+      ...current,
+      enrollments: current.enrollments.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
+    }));
+  }
+
+  function removeStudentEnrollment(index) {
+    setStudentForm(current => ({
+      ...current,
+      enrollments: current.enrollments.filter((_, itemIndex) => itemIndex !== index)
+    }));
+    setStudentFieldErrors(current => {
+      const next = { ...current };
+      delete next[`enrollment_course_${index}`];
+      delete next[`enrollment_semester_${index}`];
+      return next;
+    });
+  }
+
   async function openStudentDetails(student, modalMode) {
     setSelectedStudent(student);
     setStudentFieldErrors({});
     setError('');
+    setStudentModal(modalMode);
 
     if (modalMode === 'edit') {
       setStudentForm({
         full_name: student.full_name || '',
         email: student.email || '',
+        password: '',
+        confirm_password: '',
         phone: student.phone || '',
         department_id: student.department_id || '',
         course_id: student.course_id || '',
         admission_year: student.admission_year ?? '',
         enrollments: []
       });
+
+      try {
+        const result = await apiRequest(`/students/${student.id}/enrollments`, {
+          token: session.access_token
+        });
+
+        setStudentForm(current => ({
+          ...current,
+          enrollments: (result.enrollments || [])
+            .filter(item => item.status === 'enrolled')
+            .map(item => ({
+              course_id: item.course_id,
+              semester_id: item.semester_id
+            }))
+        }));
+      } catch (e) {
+        setError(e.message || 'Could not load student enrollments.');
+      }
     }
 
-    setStudentModal(modalMode);
-
-    try {
-      const result = await apiRequest(`/students/${student.id}`, {
-        token: session.access_token
-      });
-
-      const detailedStudent = result.student || student;
-      setSelectedStudent(detailedStudent);
-
-      if (modalMode === 'edit') {
-        let enrollments = [];
-
-        try {
-          const enrollmentResult = await apiRequest(
-            `/students/${student.id}/enrollments`,
-            { token: session.access_token }
-          );
-
-          enrollments = normalizeEnrollments(
-            enrollmentResult.enrollments || []
-          );
-        } catch (enrollmentError) {
-          console.error('Could not load student enrollments:', enrollmentError);
-        }
-
-        setStudentForm({
-          full_name: detailedStudent.full_name || '',
-          email: detailedStudent.email || '',
-          phone: detailedStudent.phone || '',
-          department_id: detailedStudent.department_id || '',
-          course_id: detailedStudent.course_id || '',
-          admission_year: detailedStudent.admission_year ?? '',
-          enrollments
+    if (modalMode === 'view') {
+      try {
+        const result = await apiRequest(`/students/${student.id}`, {
+          token: session.access_token
         });
+        setSelectedStudent(result.student);
+      } catch (e) {
+        setError(e.message);
+        setStudentModal(null);
       }
-    } catch (e) {
-      setError(e.message);
-      setStudentModal(null);
     }
   }
 
@@ -659,14 +609,29 @@ export default function App() {
       errors.full_name = 'Full name must be 120 characters or fewer.';
     }
 
-    if (
-      emailValue &&
-      (
-        emailValue.length > 254 ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
-      )
+    if (!emailValue) {
+      errors.email = 'Email is required for the student login.';
+    } else if (
+      emailValue.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
     ) {
       errors.email = 'Enter a valid email address.';
+    }
+
+    if (studentModal === 'add' || studentForm.password) {
+      if (
+        studentForm.password.length < 8 ||
+        studentForm.password.length > 128
+      ) {
+        errors.password = 'Password must be between 8 and 128 characters.';
+      }
+
+      if (studentForm.confirm_password !== studentForm.password) {
+        errors.confirm_password = 'Passwords do not match.';
+      }
+    } else if (studentForm.confirm_password) {
+      errors.confirm_password =
+        'Enter a new password before confirming it.';
     }
 
     if (studentForm.phone.trim().length > 40) {
@@ -685,28 +650,32 @@ export default function App() {
         'Enter a valid admission year between 1900 and 2200.';
     }
 
-    const enrollmentPairs = new Set();
-
-    studentForm.enrollments.forEach((enrollment, index) => {
-      if (!enrollment.course_id || !enrollment.semester_id) {
-        errors[`enrollment_${index}`] =
-          'Select both a course and a semester.';
-        return;
-      }
-
-      const pair = `${enrollment.course_id}:${enrollment.semester_id}`;
-
-      if (enrollmentPairs.has(pair)) {
-        errors[`enrollment_${index}`] =
-          'This course and semester combination has already been added.';
-      }
-
-      enrollmentPairs.add(pair);
-    });
-
     if (studentForm.course_id && !studentForm.department_id) {
       errors.course_id = 'Select a department first.';
     }
+
+    const seenEnrollments = new Set();
+
+    studentForm.enrollments.forEach((item, index) => {
+      if (!item.course_id) {
+        errors[`enrollment_course_${index}`] = 'Select a course.';
+      }
+
+      if (!item.semester_id) {
+        errors[`enrollment_semester_${index}`] = 'Select a semester.';
+      }
+
+      if (item.course_id && item.semester_id) {
+        const key = `${item.course_id}:${item.semester_id}`;
+
+        if (seenEnrollments.has(key)) {
+          errors[`enrollment_course_${index}`] =
+            'This course is already selected for this semester.';
+        }
+
+        seenEnrollments.add(key);
+      }
+    });
 
     setStudentFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -721,11 +690,9 @@ export default function App() {
     setError('');
     setMessage('');
 
-    // Only send fields accepted by the student profile API.
-    // Course-semester enrollments are saved separately below.
     const payload = {
       full_name: studentForm.full_name.trim(),
-      email: studentForm.email.trim(),
+      email: studentForm.email.trim().toLowerCase(),
       phone: studentForm.phone.trim(),
       admission_year:
         studentForm.admission_year === ''
@@ -735,52 +702,50 @@ export default function App() {
       course_id: studentForm.course_id || null
     };
 
-    const isEditing = studentModal === 'edit';
+    if (studentModal === 'add') {
+      payload.password = studentForm.password;
+      payload.confirm_password = studentForm.confirm_password;
+    } else if (studentForm.password) {
+      payload.password = studentForm.password;
+      payload.confirm_password = studentForm.confirm_password;
+    }
 
     try {
       const savedResult = await apiRequest(
-        isEditing
+        studentModal === 'edit'
           ? `/students/${selectedStudent.id}`
           : '/students',
         {
           token: session.access_token,
-          method: isEditing ? 'PATCH' : 'POST',
+          method: studentModal === 'edit' ? 'PATCH' : 'POST',
           body: JSON.stringify(payload)
         }
       );
 
-      const savedStudentId =
-        savedResult.student?.id ||
-        savedResult.id ||
-        selectedStudent?.id;
+      const studentId = savedResult.student?.id || selectedStudent?.id;
 
-      if (!savedStudentId) {
+      if (!studentId) {
         throw new Error(
-          'The student was saved, but the API did not return a student ID. Refresh the student list before continuing.'
+          'Student was saved, but the server did not return the student ID.'
         );
       }
 
-      await apiRequest(`/students/${savedStudentId}/enrollments`, {
+      await apiRequest(`/students/${studentId}/enrollments`, {
         token: session.access_token,
         method: 'PUT',
-        body: JSON.stringify({
-          enrollments: studentForm.enrollments.map(enrollment => ({
-            course_id: enrollment.course_id,
-            semester_id: enrollment.semester_id
-          }))
-        })
+        body: JSON.stringify({ enrollments: studentForm.enrollments })
       });
 
-      const nextOffset = isEditing ? studentOffset : 0;
+      const nextOffset = studentModal === 'add' ? 0 : studentOffset;
 
       setStudentOffset(nextOffset);
       setStudentModal(null);
-      setSelectedStudent(null);
+      setStudentForm(emptyStudentForm());
 
       setMessage(
-        isEditing
-          ? 'Student record and course-semester enrollments updated.'
-          : 'Student record and course-semester enrollments created.'
+        studentModal === 'edit'
+          ? 'Student record and login credentials updated successfully.'
+          : 'Student record and login account created. The student can sign in with the supplied email and password.'
       );
 
       await loadStudents({
@@ -933,14 +898,18 @@ export default function App() {
       <main className="setup-page" data-theme={theme}>
         <div className="setup-card">
           <Brand />
+
           <div className="setup-icon">
             <CircleAlert size={28} />
           </div>
+
           <h1>Configuration required</h1>
+
           <p>
             Before signing in, add your Supabase project details to{' '}
             <code>frontend/.env</code>.
           </p>
+
           <ol>
             <li>
               Copy <code>frontend/.env.example</code> to{' '}
@@ -953,6 +922,7 @@ export default function App() {
             </li>
             <li>Restart the frontend development server.</li>
           </ol>
+
           <p className="warning">
             Never put the service-role key in the frontend.
           </p>
@@ -966,19 +936,30 @@ export default function App() {
       <main className="auth-page" data-theme={theme}>
         <section className="auth-intro">
           <Brand />
+
           <div className="intro-copy">
             <span className="eyebrow">ONE CAMPUS. ONE SYSTEM.</span>
+
             <h1>University operations, made simpler.</h1>
+
             <p>
               A central place for student records, academic information,
               and university administration.
             </p>
+
             <div className="intro-points">
-              <span><ShieldCheck size={18} /> Secure role-based access</span>
-              <span><Users size={18} /> Centralized records</span>
-              <span><BookOpen size={18} /> Academic information</span>
+              <span>
+                <ShieldCheck size={18} /> Secure role-based access
+              </span>
+              <span>
+                <Users size={18} /> Centralized records
+              </span>
+              <span>
+                <BookOpen size={18} /> Academic information
+              </span>
             </div>
           </div>
+
           <small className="copyright">
             University Automation System · Starter build
           </small>
@@ -1048,6 +1029,7 @@ export default function App() {
                   aria-invalid={Boolean(signupFieldErrors.full_name)}
                   placeholder="Enter full name"
                 />
+
                 {signupFieldErrors.full_name && (
                   <small className="field-error">
                     {signupFieldErrors.full_name}
@@ -1073,6 +1055,7 @@ export default function App() {
                   aria-invalid={Boolean(signupFieldErrors.email)}
                   placeholder="name@example.com"
                 />
+
                 {signupFieldErrors.email && (
                   <small className="field-error">
                     {signupFieldErrors.email}
@@ -1087,6 +1070,7 @@ export default function App() {
                   required
                   minLength={8}
                   placeholder="At least 8 characters"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
               </>
             )}
@@ -1171,6 +1155,7 @@ export default function App() {
     <div className="app-shell" data-theme={theme}>
       <aside className="sidebar">
         <Brand />
+
         <div className="nav-label">WORKSPACE</div>
 
         {isActiveStudent ? (
@@ -1182,6 +1167,7 @@ export default function App() {
             >
               <LayoutDashboard size={18} /> Dashboard
             </button>
+
             <button
               className={`nav-item ${view === 'profile' ? 'active' : ''}`}
               aria-current={view === 'profile' ? 'page' : undefined}
@@ -1189,6 +1175,7 @@ export default function App() {
             >
               <UserRound size={18} /> My Profile
             </button>
+
             <button
               className={`nav-item ${view === 'courses' ? 'active' : ''}`}
               aria-current={view === 'courses' ? 'page' : undefined}
@@ -1196,6 +1183,7 @@ export default function App() {
             >
               <BookOpen size={18} /> Courses &amp; Subjects
             </button>
+
             <button
               className={`nav-item ${view === 'timetable' ? 'active' : ''}`}
               aria-current={view === 'timetable' ? 'page' : undefined}
@@ -1203,6 +1191,7 @@ export default function App() {
             >
               <Clock3 size={18} /> Timetable
             </button>
+
             <button
               className={`nav-item ${view === 'attendance' ? 'active' : ''}`}
               aria-current={view === 'attendance' ? 'page' : undefined}
@@ -1210,6 +1199,7 @@ export default function App() {
             >
               <ClipboardCheck size={18} /> Attendance
             </button>
+
             <button
               className={`nav-item ${view === 'calendar' ? 'active' : ''}`}
               aria-current={view === 'calendar' ? 'page' : undefined}
@@ -1266,6 +1256,7 @@ export default function App() {
             {isAdmin && (
               <button
                 className={`nav-item ${view === 'facultyManagement' ? 'active' : ''}`}
+                aria-current={view === 'facultyManagement' ? 'page' : undefined}
                 onClick={() => {
                   setView('facultyManagement');
                   setError('');
@@ -1279,6 +1270,7 @@ export default function App() {
             {isAdmin && (
               <button
                 className={`nav-item ${view === 'academic' ? 'active' : ''}`}
+                aria-current={view === 'academic' ? 'page' : undefined}
                 onClick={() => {
                   setView('academic');
                   setError('');
@@ -1316,11 +1308,13 @@ export default function App() {
                 .slice(0, 1)
                 .toUpperCase()}
             </div>
+
             <div className="user-meta">
               <strong>{profile?.full_name || session.user.email}</strong>
               <small>{profile?.role || 'Account pending'}</small>
             </div>
           </div>
+
           <button className="nav-item" onClick={signOut}>
             <LogOut size={18} /> Sign out
           </button>
@@ -1333,6 +1327,7 @@ export default function App() {
             <span className="muted">University Automation System</span>
             <h1>{pageTitles[view] || 'Dashboard'}</h1>
           </div>
+
           <div className="top-actions">
             <span
               className={`status-pill ${isPending ? 'pending' : 'active-status'}`}
@@ -1341,6 +1336,7 @@ export default function App() {
                 ? 'Pending verification'
                 : profile?.account_status || 'Loading'}
             </span>
+
             <button
               className="icon-button theme-toggle"
               type="button"
@@ -1349,9 +1345,12 @@ export default function App() {
               aria-pressed={theme === 'dark'}
               onClick={toggleTheme}
             >
-              {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
+              {theme === 'light'
+                ? <Moon size={17} />
+                : <Sun size={17} />}
               <span>{theme === 'light' ? 'Dark' : 'Light'}</span>
             </button>
+
             <button
               className="icon-button"
               title="Refresh profile"
@@ -1371,12 +1370,15 @@ export default function App() {
             <div className="pending-icon">
               <Clock3 size={30} />
             </div>
+
             <h2>Registration under review</h2>
+
             <p>
               Your account has been created, but student portal access is not
               yet enabled. An Admin must verify your details and link your
               account to the correct student record.
             </p>
+
             <button
               className="secondary-button"
               onClick={() => loadProfile(session.access_token)}
@@ -1391,6 +1393,7 @@ export default function App() {
                 ? 'Loading account details…'
                 : 'Account details could not be loaded. Check the error above, then retry.'}
             </p>
+
             <button
               className="secondary-button"
               disabled={profileLoading}
@@ -1408,6 +1411,7 @@ export default function App() {
                   Review each account before granting student access.
                 </p>
               </div>
+
               <button
                 className="secondary-button"
                 onClick={loadAdminRegistrations}
@@ -1428,6 +1432,7 @@ export default function App() {
                       <th>Action</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {data.map(r => (
                       <tr key={r.profile_id}>
@@ -1450,6 +1455,7 @@ export default function App() {
                             >
                               Approve
                             </button>
+
                             <button
                               className="reject-button"
                               disabled={busy}
@@ -1483,10 +1489,11 @@ export default function App() {
                 <div>
                   <h2>Student Management</h2>
                   <p className="muted">
-                    Create and maintain student records. Creating a record
-                    does not create or activate a login account.
+                    Create and maintain student records, login credentials,
+                    and course enrollments.
                   </p>
                 </div>
+
                 <div className="admin-page-actions">
                   <button
                     className="secondary-button"
@@ -1498,6 +1505,7 @@ export default function App() {
                   >
                     <RefreshCw size={15} /> Refresh
                   </button>
+
                   <button
                     className="primary-button admin-add-button"
                     onClick={openStudentCreate}
@@ -1513,7 +1521,9 @@ export default function App() {
                 </div>
                 <span>Total student records</span>
                 <strong>
-                  {studentsLoading && studentTotal === 0 ? '…' : studentTotal}
+                  {studentsLoading && studentTotal === 0
+                    ? '…'
+                    : studentTotal}
                 </strong>
               </div>
 
@@ -1663,11 +1673,12 @@ export default function App() {
                         <th>Full name</th>
                         <th>Email</th>
                         <th>Department</th>
-                        <th>Course / Semester</th>
+                        <th>Course</th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {students.map(student => (
                         <tr key={student.id}>
@@ -1676,30 +1687,17 @@ export default function App() {
                           <td>{student.email || '—'}</td>
                           <td>{student.department?.name || '—'}</td>
                           <td>
-                            {student.enrollments?.length ? (
-                              <div className="student-enrollment-chips">
-                                {student.enrollments.map((enrollment, index) => (
-                                  <span
-                                    className="enrollment-chip"
-                                    key={
-                                      enrollment.id ||
-                                      `${enrollment.course_id}-${enrollment.semester_id}-${index}`
-                                    }
-                                  >
-                                    {enrollment.course?.name ||
-                                      enrollment.course_name ||
-                                      'Course'}
-                                    {' · '}
-                                    {enrollment.semester?.name ||
-                                      enrollment.semester?.label ||
-                                      enrollment.semester_name ||
-                                      'Semester'}
-                                  </span>
-                                ))}
+                            {student.enrollments?.filter(item => item.status === 'enrolled').length ? (
+                              <div className="student-course-list">
+                                {student.enrollments
+                                  .filter(item => item.status === 'enrolled')
+                                  .map(item => (
+                                    <span className="student-course-chip" key={item.id}>
+                                      {item.course?.name || 'Course'} — {item.semester?.label || `Semester ${item.semester?.semester_number || ''}`}
+                                    </span>
+                                  ))}
                               </div>
-                            ) : (
-                              student.course?.name || '—'
-                            )}
+                            ) : student.course?.name || '—'}
                           </td>
                           <td>
                             <span
@@ -1719,6 +1717,7 @@ export default function App() {
                               >
                                 <Eye size={14} />
                               </button>
+
                               <button
                                 className="secondary-button student-action"
                                 title="Edit student"
@@ -1728,6 +1727,7 @@ export default function App() {
                               >
                                 <Pencil size={14} />
                               </button>
+
                               <button
                                 className={
                                   student.status === 'active'
@@ -1776,11 +1776,13 @@ export default function App() {
                 >
                   <ChevronLeft size={15} /> Previous
                 </button>
+
                 <span>
                   {studentFilteredTotal
                     ? `${studentOffset + 1}–${Math.min(studentOffset + students.length, studentFilteredTotal)} of ${studentFilteredTotal}`
                     : '0 results'}
                 </span>
+
                 <button
                   className="secondary-button"
                   disabled={
@@ -1810,6 +1812,7 @@ export default function App() {
                   administration workspace.
                 </p>
               </div>
+
               <div className="admin-page-actions">
                 <button
                   className="secondary-button"
@@ -1818,6 +1821,7 @@ export default function App() {
                 >
                   <RefreshCw size={15} /> Refresh
                 </button>
+
                 <button
                   className="primary-button admin-add-button"
                   onClick={openAdminDialog}
@@ -1843,6 +1847,7 @@ export default function App() {
                       <th>Created</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {admins.map(admin => (
                       <tr key={admin.id}>
@@ -1881,125 +1886,77 @@ export default function App() {
             )}
           </section>
         ) : view === 'profile' && isActiveStudent ? (
-          <section className="panel student-module-panel">
+          <section className="panel">
             <div className="panel-heading">
               <div>
-                <h2>My student profile</h2>
+                <h2>My Profile</h2>
                 <p className="muted">
-                  Official identity and academic placement are read-only.
+                  View your student record and update your phone number.
                 </p>
               </div>
-              <button
-                className="secondary-button"
-                disabled={studentRecordLoading}
-                onClick={() => loadProfile(session.access_token)}
-              >
-                <RefreshCw size={15} /> Refresh
-              </button>
             </div>
 
             {studentRecordLoading ? (
               <div className="empty-state">
                 <RefreshCw size={24} />
-                <span>Loading your profile…</span>
+                <span>Loading student profile…</span>
               </div>
             ) : studentRecordError ? (
-              <div className="empty-state">
-                <CircleAlert size={26} />
-                <strong>Profile could not be loaded</strong>
-                <span>{studentRecordError}</span>
-                <button
-                  className="secondary-button"
-                  onClick={() => loadProfile(session.access_token)}
-                >
-                  Retry
-                </button>
-              </div>
+              <div className="alert error">{studentRecordError}</div>
             ) : studentRecord ? (
               <>
                 <div className="profile-grid">
                   <div className="profile-field">
                     <span>Student ID</span>
-                    <strong>{studentRecord.student_code}</strong>
+                    <strong>{studentRecord.student_code || '—'}</strong>
                   </div>
                   <div className="profile-field">
                     <span>Full name</span>
-                    <strong>{studentRecord.full_name}</strong>
+                    <strong>{studentRecord.full_name || '—'}</strong>
                   </div>
                   <div className="profile-field">
-                    <span>Email</span>
-                    <strong>{studentRecord.email || '—'}</strong>
+                    <span>Email address</span>
+                    <strong>{studentRecord.email || session.user.email || '—'}</strong>
+                  </div>
+                  <div className="profile-field">
+                    <span>Department</span>
+                    <strong>{studentRecord.department?.name || '—'}</strong>
+                  </div>
+                  <div className="profile-field">
+                    <span>Course</span>
+                    <strong>{studentRecord.course?.name || '—'}</strong>
+                  </div>
+                  <div className="profile-field">
+                    <span>Admission year</span>
+                    <strong>{studentRecord.admission_year || '—'}</strong>
                   </div>
                   <div className="profile-field">
                     <span>Account status</span>
-                    <strong>
-                      {profile.account_status.replaceAll('_', ' ')}
-                    </strong>
-                  </div>
-                  {studentRecord.department && (
-                    <div className="profile-field">
-                      <span>Department</span>
-                      <strong>
-                        {studentRecord.department.name} (
-                        {studentRecord.department.code})
-                      </strong>
-                    </div>
-                  )}
-                  {studentRecord.course && (
-                    <div className="profile-field">
-                      <span>Course</span>
-                      <strong>
-                        {studentRecord.course.name} (
-                        {studentRecord.course.code})
-                      </strong>
-                    </div>
-                  )}
-                  {studentRecord.admission_year && (
-                    <div className="profile-field">
-                      <span>Admission year</span>
-                      <strong>{studentRecord.admission_year}</strong>
-                    </div>
-                  )}
-                  <div className="profile-field">
-                    <span>Student record status</span>
-                    <strong>{studentRecord.status}</strong>
+                    <strong>{studentRecord.status || '—'}</strong>
                   </div>
                 </div>
 
-                <form
-                  className="student-profile-form"
-                  onSubmit={saveStudentPhone}
-                  noValidate
-                >
-                  <h3>Permitted personal detail</h3>
+                <form onSubmit={saveStudentPhone} className="profile-edit-form">
                   <label htmlFor="student-profile-phone">Phone number</label>
                   <input
                     id="student-profile-phone"
                     type="tel"
-                    maxLength={40}
                     value={phoneDraft}
-                    aria-invalid={Boolean(phoneError)}
-                    aria-describedby={
-                      phoneError ? 'student-profile-phone-error' : undefined
-                    }
-                    onChange={event => {
-                      setPhoneDraft(event.target.value);
-                      setPhoneError('');
-                      setPhoneMessage('');
-                    }}
+                    maxLength={40}
+                    onChange={event => setPhoneDraft(event.target.value)}
                   />
+
                   {phoneError && (
-                    <small
-                      id="student-profile-phone-error"
-                      className="field-error"
-                    >
-                      {phoneError}
-                    </small>
+                    <small className="field-error">{phoneError}</small>
                   )}
                   {phoneMessage && (
                     <div className="alert success">{phoneMessage}</div>
                   )}
-                  <button className="primary-button" disabled={phoneSaving}>
+
+                  <button
+                    className="primary-button"
+                    disabled={phoneSaving}
+                  >
                     {phoneSaving ? 'Saving…' : 'Save phone number'}
                   </button>
                 </form>
@@ -2007,8 +1964,8 @@ export default function App() {
             ) : (
               <div className="empty-state">
                 <UserRound size={26} />
-                <strong>No student record is linked to this account</strong>
-                <span>Contact your university administrator.</span>
+                <strong>Student profile not available</strong>
+                <span>Contact an administrator if this continues.</span>
               </div>
             )}
           </section>
@@ -2016,163 +1973,192 @@ export default function App() {
           <EmptyPortalPanel
             icon={BookOpen}
             title="Courses & Subjects"
-            description="Review your academic courses and assigned subjects."
-            requirement="Your assigned courses and subjects will appear here once they are available."
+            description="Review your course and subject information."
+            requirement="Course information will appear here when it is configured for your student record."
           />
         ) : view === 'timetable' && isActiveStudent ? (
           <EmptyPortalPanel
             icon={Clock3}
             title="Timetable"
-            description="Review your scheduled classes."
-            requirement="Your timetable will appear here once it has been configured."
+            description="View your class schedule."
+            requirement="Your timetable will appear here when timetable data is configured."
           />
         ) : view === 'attendance' && isActiveStudent ? (
           <EmptyPortalPanel
             icon={ClipboardCheck}
             title="Attendance"
-            description="Review attendance records for your classes."
-            requirement="Attendance information will appear here once records are available."
+            description="Review your attendance information."
+            requirement="Attendance records will appear here when attendance data is available."
           />
         ) : view === 'calendar' && isActiveStudent ? (
           <EmptyPortalPanel
             icon={CalendarDays}
             title="Academic Calendar"
-            description="View upcoming academic dates and events."
-            requirement="Academic calendar events will appear here once they are published."
+            description="View academic dates and events."
+            requirement="Academic calendar entries will appear here when they are configured."
           />
-        ) : view === 'dashboard' ? (
-          <section className="dashboard-grid">
+        ) : (
+          <section className="dashboard-content">
             <div className="welcome-card">
               <div>
-                <span className="eyebrow">YOUR WORKSPACE</span>
-                <h2>
-                  Welcome back, {profile?.full_name?.split(' ')[0] || 'there'}.
-                </h2>
+                <span className="eyebrow">YOUR CAMPUS WORKSPACE</span>
+                <h2>Welcome back, {profile?.full_name || 'User'}.</h2>
                 <p>
-                  {isAdmin
-                    ? 'Manage student records, academic structure, and university access from one place.'
-                    : isFaculty
-                      ? 'Access your faculty workspace and academic responsibilities.'
-                      : 'Your university account and academic information are managed here.'}
+                  Manage your university information from one central workspace.
                 </p>
               </div>
               <div className="welcome-icon">
-                <GraduationCap size={38} />
+                <GraduationCap size={40} />
               </div>
             </div>
 
-            {isAdmin ? (
-              <>
-                <button
-                  className="dashboard-card"
-                  onClick={openStudentManagement}
-                >
-                  <div className="stat-icon blue"><Users size={22} /></div>
-                  <span>Student Management</span>
-                  <strong>Manage students</strong>
-                  <small>View, add, edit, and update student records.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={() => setView('academic')}
-                >
-                  <div className="stat-icon purple"><Building2 size={22} /></div>
-                  <span>Academic Management</span>
-                  <strong>Academic structure</strong>
-                  <small>Manage departments, courses, semesters, and subjects.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={loadAdminRegistrations}
-                >
-                  <div className="stat-icon orange"><ShieldCheck size={22} /></div>
-                  <span>Student verification</span>
-                  <strong>Review registrations</strong>
-                  <small>Review pending student account requests.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={() => setView('facultyManagement')}
-                >
-                  <div className="stat-icon green"><Users size={22} /></div>
-                  <span>Faculty Management</span>
-                  <strong>Manage faculty</strong>
-                  <small>Maintain faculty accounts and assignments.</small>
-                </button>
-                <button className="dashboard-card" onClick={loadAdmins}>
-                  <div className="stat-icon blue"><Shield size={22} /></div>
-                  <span>Admin Management</span>
-                  <strong>Manage administrators</strong>
-                  <small>View and create administrator accounts.</small>
-                </button>
-              </>
-            ) : isFaculty ? (
-              <button
-                className="dashboard-card"
-                onClick={() => setView('faculty')}
-              >
-                <div className="stat-icon blue">
-                  <LayoutDashboard size={22} />
-                </div>
-                <span>Faculty Workspace</span>
-                <strong>Open dashboard</strong>
-                <small>Access your faculty dashboard and assigned work.</small>
-              </button>
-            ) : (
-              <>
-                <button
-                  className="dashboard-card"
-                  onClick={loadStudentProfile}
-                >
-                  <div className="stat-icon blue"><UserRound size={22} /></div>
-                  <span>My Profile</span>
-                  <strong>Student information</strong>
-                  <small>Review your student profile and contact details.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={() => setView('courses')}
-                >
-                  <div className="stat-icon purple"><BookOpen size={22} /></div>
-                  <span>Courses & Subjects</span>
-                  <strong>Academic courses</strong>
-                  <small>Review your assigned courses and subjects.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={() => setView('timetable')}
-                >
-                  <div className="stat-icon orange"><Clock3 size={22} /></div>
-                  <span>Timetable</span>
-                  <strong>Class schedule</strong>
-                  <small>Check your class schedule when it is available.</small>
-                </button>
-                <button
-                  className="dashboard-card"
-                  onClick={() => setView('attendance')}
-                >
-                  <div className="stat-icon green">
-                    <ClipboardCheck size={22} />
+            <div className="dashboard-grid">
+              <div className="dashboard-stat-column">
+                <section className="dashboard-stat-card">
+                  <div className="stat-icon blue">
+                    <Users size={22} />
                   </div>
-                  <span>Attendance</span>
-                  <strong>Attendance records</strong>
-                  <small>Review your recorded attendance.</small>
-                </button>
-              </>
-            )}
-          </section>
-        ) : (
-          <section className="panel">
-            <h2>Page not available</h2>
-            <p className="muted">
-              This page is not available for your current account role.
-            </p>
-            <button
-              className="secondary-button"
-              onClick={() => setView('dashboard')}
-            >
-              Back to dashboard
-            </button>
+                  <div>
+                    <span>Account role</span>
+                    <strong>
+                      {profile?.role
+                        ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+                        : 'Loading'}
+                    </strong>
+                    <small>Based on your university account</small>
+                  </div>
+                </section>
+
+                <section className="dashboard-stat-card">
+                  <div className="stat-icon green">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <span>Account status</span>
+                    <strong>
+                      {profile?.account_status
+                        ? profile.account_status.replaceAll('_', ' ').replace(/\b\w/g, char => char.toUpperCase())
+                        : 'Loading'}
+                    </strong>
+                    <small>Current access status</small>
+                  </div>
+                </section>
+
+                <section className="dashboard-stat-card">
+                  <div className="stat-icon purple">
+                    <BookOpen size={22} />
+                  </div>
+                  <div>
+                    <span>Academic workspace</span>
+                    <strong>Management</strong>
+                    <small>Available modules depend on your role</small>
+                  </div>
+                </section>
+              </div>
+
+              <section className="workspace-overview">
+                <h2>Workspace overview</h2>
+                <p className="muted">
+                  Manage student verification, student records, faculty, and academic setup.
+                </p>
+
+                <div className="workspace-links">
+                  {isAdmin && (
+                    <>
+                      <button
+                        className="workspace-link"
+                        onClick={loadAdminRegistrations}
+                      >
+                        <span className="workspace-link-icon"><Users size={20} /></span>
+                        <span>
+                          <strong>Student verification</strong>
+                          <small>Review pending student registrations</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+
+                      <button
+                        className="workspace-link"
+                        onClick={openStudentManagement}
+                      >
+                        <span className="workspace-link-icon"><UserRoundPlus size={20} /></span>
+                        <span>
+                          <strong>Student management</strong>
+                          <small>Maintain student records and login credentials</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+
+                      <button
+                        className="workspace-link"
+                        onClick={() => setView('facultyManagement')}
+                      >
+                        <span className="workspace-link-icon"><Users size={20} /></span>
+                        <span>
+                          <strong>Faculty management</strong>
+                          <small>Create and manage faculty accounts</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+
+                      <button
+                        className="workspace-link"
+                        onClick={() => setView('academic')}
+                      >
+                        <span className="workspace-link-icon"><Building2 size={20} /></span>
+                        <span>
+                          <strong>Academic management</strong>
+                          <small>Manage departments, courses, and semesters</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+                    </>
+                  )}
+
+                  {isFaculty && (
+                    <button
+                      className="workspace-link"
+                      onClick={() => setView('faculty')}
+                    >
+                      <span className="workspace-link-icon"><LayoutDashboard size={20} /></span>
+                      <span>
+                        <strong>Faculty workspace</strong>
+                        <small>Open your faculty dashboard</small>
+                      </span>
+                      <ChevronRight size={18} />
+                    </button>
+                  )}
+
+                  {isActiveStudent && (
+                    <>
+                      <button
+                        className="workspace-link"
+                        onClick={loadStudentProfile}
+                      >
+                        <span className="workspace-link-icon"><UserRound size={20} /></span>
+                        <span>
+                          <strong>My profile</strong>
+                          <small>View your student record</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+
+                      <button
+                        className="workspace-link"
+                        onClick={() => setView('courses')}
+                      >
+                        <span className="workspace-link-icon"><BookOpen size={20} /></span>
+                        <span>
+                          <strong>Courses & Subjects</strong>
+                          <small>Review course information</small>
+                        </span>
+                        <ChevronRight size={18} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </section>
+            </div>
           </section>
         )}
       </main>
@@ -2184,457 +2170,413 @@ export default function App() {
           onMouseDown={event => {
             if (event.target === event.currentTarget && !busy) {
               setStudentModal(null);
-              setSelectedStudent(null);
             }
           }}
         >
           <section
-            className="modal student-modal"
+            className="student-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="student-modal-title"
           >
-            <div className="modal-heading">
+            <div className="panel-heading">
               <div>
-                <span className="eyebrow">STUDENT MANAGEMENT</span>
                 <h2 id="student-modal-title">
-                  {studentModal === 'add'
-                    ? 'Add Student'
+                  {studentModal === 'view'
+                    ? 'Student Details'
                     : studentModal === 'edit'
                       ? 'Edit Student'
-                      : 'Student Details'}
+                      : 'Add Student'}
                 </h2>
+                <p className="muted">
+                  {studentModal === 'view'
+                    ? 'Review the student record below.'
+                    : studentModal === 'edit'
+                      ? 'Update student information and login credentials below.'
+                      : 'Create a student record and its Supabase login account.'}
+                </p>
               </div>
+
               <button
-                className="icon-button"
                 type="button"
-                aria-label="Close dialog"
+                className="icon-button"
+                aria-label="Close"
                 disabled={busy}
-                onClick={() => {
-                  setStudentModal(null);
-                  setSelectedStudent(null);
-                }}
+                onClick={() => setStudentModal(null)}
               >
                 <X size={18} />
               </button>
             </div>
 
-            {studentModal === 'view' && selectedStudent ? (
-              <div className="student-details">
-                <div className="profile-grid">
-                  <div className="profile-field">
-                    <span>Student ID</span>
-                    <strong>{selectedStudent.student_code || '—'}</strong>
+            {studentModal === 'view' ? (
+              selectedStudent ? (
+                <div className="student-details">
+                  <div className="profile-grid">
+                    <div className="profile-field">
+                      <span>Student ID</span>
+                      <strong>{selectedStudent.student_code || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Full name</span>
+                      <strong>{selectedStudent.full_name || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Email address / Login username</span>
+                      <strong>{selectedStudent.email || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Phone number</span>
+                      <strong>{selectedStudent.phone || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Department</span>
+                      <strong>{selectedStudent.department?.name || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Course enrollments</span>
+                      <strong>
+                        {selectedStudent.enrollments?.filter(item => item.status === 'enrolled').length
+                          ? selectedStudent.enrollments.filter(item => item.status === 'enrolled').map(item => `${item.course?.name || 'Course'} — ${item.semester?.label || `Semester ${item.semester?.semester_number || ''}`}`).join(', ')
+                          : 'No course-semester enrollments loaded'}
+                      </strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Admission year</span>
+                      <strong>{selectedStudent.admission_year || '—'}</strong>
+                    </div>
+                    <div className="profile-field">
+                      <span>Status</span>
+                      <strong>{selectedStudent.status || '—'}</strong>
+                    </div>
                   </div>
-                  <div className="profile-field">
-                    <span>Full name</span>
-                    <strong>{selectedStudent.full_name || '—'}</strong>
-                  </div>
-                  <div className="profile-field">
-                    <span>Email</span>
-                    <strong>{selectedStudent.email || '—'}</strong>
-                  </div>
-                  <div className="profile-field">
-                    <span>Phone</span>
-                    <strong>{selectedStudent.phone || '—'}</strong>
-                  </div>
-                  <div className="profile-field">
-                    <span>Department</span>
-                    <strong>{selectedStudent.department?.name || '—'}</strong>
-                  </div>
-                  <div className="profile-field">
-                    <span>Admission year</span>
-                    <strong>{selectedStudent.admission_year || '—'}</strong>
-                  </div>
-                  <div className="profile-field">
-                    <span>Status</span>
-                    <strong>{selectedStudent.status || '—'}</strong>
+
+                  <div className="modal-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={() => setStudentModal(null)}
+                    >
+                      Close
+                    </button>
+                    <button
+                      className="primary-button"
+                      onClick={() => openStudentDetails(selectedStudent, 'edit')}
+                    >
+                      <Pencil size={15} /> Edit Student
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div className="empty-state">
+                  <RefreshCw size={24} />
+                  <span>Loading student details…</span>
+                </div>
+              )
+            ) : (
+              <form onSubmit={saveStudent} noValidate>
+                <label htmlFor="student-full-name">Full name</label>
+                <input
+                  id="student-full-name"
+                  value={studentForm.full_name}
+                  maxLength={120}
+                  aria-invalid={Boolean(studentFieldErrors.full_name)}
+                  onChange={event =>
+                    setStudentForm({
+                      ...studentForm,
+                      full_name: event.target.value
+                    })
+                  }
+                  required
+                />
+                {studentFieldErrors.full_name && (
+                  <small className="field-error">
+                    {studentFieldErrors.full_name}
+                  </small>
+                )}
 
-                <div className="student-detail-enrollments">
-                  <h3>Course and semester enrollments</h3>
-                  {selectedStudent.enrollments?.length ? (
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Course</th>
-                            <th>Semester</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedStudent.enrollments.map((enrollment, index) => (
-                            <tr
-                              key={
-                                enrollment.id ||
-                                `${enrollment.course_id}-${enrollment.semester_id}-${index}`
-                              }
-                            >
-                              <td>
-                                {enrollment.course?.name ||
-                                  enrollment.course_name ||
-                                  '—'}
-                              </td>
-                              <td>
-                                {enrollment.semester?.name ||
-                                  enrollment.semester?.label ||
-                                  enrollment.semester_name ||
-                                  '—'}
-                              </td>
-                              <td>{enrollment.status || 'enrolled'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
+                <label htmlFor="student-email">Email address / Login username</label>
+                <input
+                  id="student-email"
+                  type="email"
+                  value={studentForm.email}
+                  autoComplete="off"
+                  aria-invalid={Boolean(studentFieldErrors.email)}
+                  onChange={event =>
+                    setStudentForm({
+                      ...studentForm,
+                      email: event.target.value
+                    })
+                  }
+                  required
+                />
+                {studentFieldErrors.email && (
+                  <small className="field-error">
+                    {studentFieldErrors.email}
+                  </small>
+                )}
+
+                <div className="student-password-fields">
+                  <h3>
+                    {studentModal === 'edit'
+                      ? 'Update Login Password'
+                      : 'Student Login Password'}
+                  </h3>
+                  {studentModal === 'edit' && (
                     <p className="muted">
-                      No course-semester enrollments are assigned to this student.
+                      Leave both password fields blank to keep the current password.
+                      Enter a new password only if you want to change it in Supabase Auth.
                     </p>
+                  )}
+
+                  <label htmlFor="student-password">
+                    {studentModal === 'edit' ? 'New password' : 'Password'}
+                  </label>
+                  <input
+                    id="student-password"
+                    type="password"
+                    value={studentForm.password}
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    aria-invalid={Boolean(studentFieldErrors.password)}
+                    onChange={event =>
+                      setStudentForm(current => ({
+                        ...current,
+                        password: event.target.value
+                      }))
+                    }
+                    required={studentModal === 'add'}
+                    placeholder={
+                      studentModal === 'edit'
+                        ? 'Leave blank to keep current password'
+                        : 'At least 8 characters'
+                    }
+                  />
+                  {studentFieldErrors.password && (
+                    <small className="field-error">
+                      {studentFieldErrors.password}
+                    </small>
+                  )}
+
+                  <label htmlFor="student-confirm-password">
+                    Confirm {studentModal === 'edit' ? 'new ' : ''}password
+                  </label>
+                  <input
+                    id="student-confirm-password"
+                    type="password"
+                    value={studentForm.confirm_password}
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    aria-invalid={Boolean(studentFieldErrors.confirm_password)}
+                    onChange={event =>
+                      setStudentForm(current => ({
+                        ...current,
+                        confirm_password: event.target.value
+                      }))
+                    }
+                    required={studentModal === 'add'}
+                    placeholder="Re-enter password"
+                  />
+                  {studentFieldErrors.confirm_password && (
+                    <small className="field-error">
+                      {studentFieldErrors.confirm_password}
+                    </small>
                   )}
                 </div>
 
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => {
-                      setStudentModal(null);
-                      setSelectedStudent(null);
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => openStudentDetails(selectedStudent, 'edit')}
-                  >
-                    <Pencil size={15} /> Edit Student
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form
-                className="student-form"
-                onSubmit={saveStudent}
-                noValidate
-              >
-                <div className="student-form-grid">
-                  <label>
-                    Full name
-                    <input
-                      value={studentForm.full_name}
-                      maxLength={120}
-                      aria-invalid={Boolean(studentFieldErrors.full_name)}
-                      onChange={event => {
-                        setStudentForm({
-                          ...studentForm,
-                          full_name: event.target.value
-                        });
-                        setStudentFieldErrors({
-                          ...studentFieldErrors,
-                          full_name: ''
-                        });
-                      }}
-                      required
-                    />
-                    {studentFieldErrors.full_name && (
-                      <small className="field-error">
-                        {studentFieldErrors.full_name}
-                      </small>
-                    )}
-                  </label>
+                <label htmlFor="student-phone">Phone number</label>
+                <input
+                  id="student-phone"
+                  type="tel"
+                  value={studentForm.phone}
+                  maxLength={40}
+                  aria-invalid={Boolean(studentFieldErrors.phone)}
+                  onChange={event =>
+                    setStudentForm({
+                      ...studentForm,
+                      phone: event.target.value
+                    })
+                  }
+                />
+                {studentFieldErrors.phone && (
+                  <small className="field-error">
+                    {studentFieldErrors.phone}
+                  </small>
+                )}
 
-                  <label>
-                    Email address
-                    <input
-                      type="email"
-                      value={studentForm.email}
-                      maxLength={254}
-                      aria-invalid={Boolean(studentFieldErrors.email)}
-                      onChange={event => {
-                        setStudentForm({
-                          ...studentForm,
-                          email: event.target.value
-                        });
-                        setStudentFieldErrors({
-                          ...studentFieldErrors,
-                          email: ''
-                        });
-                      }}
-                    />
-                    {studentFieldErrors.email && (
-                      <small className="field-error">
-                        {studentFieldErrors.email}
-                      </small>
-                    )}
-                  </label>
+                <label htmlFor="student-department">Department</label>
+                <select
+                  id="student-department"
+                  value={studentForm.department_id}
+                  onChange={event =>
+                    setStudentForm({
+                      ...studentForm,
+                      department_id: event.target.value,
+                      course_id: ''
+                    })
+                  }
+                >
+                  <option value="">No department assigned</option>
+                  {studentOptions.departments.map(department => (
+                    <option value={department.id} key={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
 
-                  <label>
-                    Phone number
-                    <input
-                      type="tel"
-                      value={studentForm.phone}
-                      maxLength={40}
-                      aria-invalid={Boolean(studentFieldErrors.phone)}
-                      onChange={event => {
-                        setStudentForm({
-                          ...studentForm,
-                          phone: event.target.value
-                        });
-                        setStudentFieldErrors({
-                          ...studentFieldErrors,
-                          phone: ''
-                        });
-                      }}
-                    />
-                    {studentFieldErrors.phone && (
-                      <small className="field-error">
-                        {studentFieldErrors.phone}
-                      </small>
-                    )}
-                  </label>
-
-                  <label>
-                    Department
-                    <select
-                      value={studentForm.department_id}
-                      onChange={event => {
-                        const departmentId = event.target.value;
-                        setStudentForm({
-                          ...studentForm,
-                          department_id: departmentId,
-                          course_id: '',
-                          enrollments: studentForm.enrollments.map(
-                            enrollment => ({
-                              ...enrollment,
-                              course_id: '',
-                              semester_id: ''
-                            })
-                          )
-                        });
-                        setStudentFieldErrors({
-                          ...studentFieldErrors,
-                          department_id: '',
-                          course_id: ''
-                        });
-                      }}
-                    >
-                      <option value="">Select department</option>
-                      {studentOptions.departments.map(department => (
-                        <option value={department.id} key={department.id}>
-                          {department.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Admission year
-                    <input
-                      type="number"
-                      min="1900"
-                      max="2200"
-                      value={studentForm.admission_year}
-                      aria-invalid={Boolean(studentFieldErrors.admission_year)}
-                      onChange={event => {
-                        setStudentForm({
-                          ...studentForm,
-                          admission_year: event.target.value
-                        });
-                        setStudentFieldErrors({
-                          ...studentFieldErrors,
-                          admission_year: ''
-                        });
-                      }}
-                    />
-                    {studentFieldErrors.admission_year && (
-                      <small className="field-error">
-                        {studentFieldErrors.admission_year}
-                      </small>
-                    )}
-                  </label>
-                </div>
-
-                <div className="student-enrollment-section">
-                  <div className="student-enrollment-heading">
+                <div className="student-enrollments-editor">
+                  <div className="panel-heading">
                     <div>
-                      <h3>Course and semester enrollment</h3>
+                      <h3>Course Enrollments</h3>
                       <p className="muted">
-                        Assign one or more courses to their respective semesters.
+                        Assign one or more courses to specific semesters.
                       </p>
                     </div>
                     <button
                       type="button"
                       className="secondary-button"
-                      onClick={() => {
-                        setStudentForm({
-                          ...studentForm,
-                          enrollments: addStudentEnrollment(
-                            studentForm.enrollments
-                          )
-                        });
-                      }}
+                      onClick={addStudentEnrollment}
+                      disabled={busy}
                     >
-                      <UserPlus size={15} /> Add Enrollment
+                      <UserPlus size={15} /> Add Course
                     </button>
                   </div>
 
-                  {studentOptionsLoading ? (
-                    <p className="muted">Loading academic options…</p>
-                  ) : studentForm.enrollments.length === 0 ? (
-                    <div className="empty-state enrollment-empty-state">
-                      <BookOpen size={24} />
-                      <strong>No enrollments added</strong>
-                      <span>
-                        Use “Add Enrollment” to assign courses and semesters.
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="student-enrollment-list">
-                      {studentForm.enrollments.map((enrollment, index) => {
-                        const availableCourses = studentOptions.courses.filter(
-                          course =>
-                            !studentForm.department_id ||
-                            course.department_id === studentForm.department_id
-                        );
-
-                        const availableSemesters = studentOptions.semesters;
-
-                        return (
-                          <div
-                            className="student-enrollment-row"
-                            key={`enrollment-${index}`}
-                          >
-                            <div className="enrollment-row-heading">
-                              <strong>Enrollment {index + 1}</strong>
-                              <button
-                                type="button"
-                                className="icon-button enrollment-remove-button"
-                                aria-label={`Remove enrollment ${index + 1}`}
-                                onClick={() => {
-                                  setStudentForm({
-                                    ...studentForm,
-                                    enrollments: removeStudentEnrollment(
-                                      studentForm.enrollments,
-                                      index
-                                    )
-                                  });
-                                  setStudentFieldErrors(current => {
-                                    const next = { ...current };
-                                    delete next[`enrollment_${index}`];
-                                    return next;
-                                  });
-                                }}
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-
-                            <div className="student-enrollment-fields">
-                              <label>
-                                Course
-                                <select
-                                  value={enrollment.course_id}
-                                  aria-invalid={Boolean(
-                                    studentFieldErrors[`enrollment_${index}`]
-                                  )}
-                                  onChange={event => {
-                                    setStudentForm({
-                                      ...studentForm,
-                                      enrollments: updateStudentEnrollment(
-                                        studentForm.enrollments,
-                                        index,
-                                        'course_id',
-                                        event.target.value
-                                      )
-                                    });
-                                    setStudentFieldErrors(current => ({
-                                      ...current,
-                                      [`enrollment_${index}`]: ''
-                                    }));
-                                  }}
-                                  required
-                                >
-                                  <option value="">Select course</option>
-                                  {availableCourses.map(course => (
-                                    <option
-                                      value={course.id}
-                                      key={course.id}
-                                    >
-                                      {course.name}
-                                      {course.code ? ` (${course.code})` : ''}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-
-                              <label>
-                                Semester
-                                <select
-                                  value={enrollment.semester_id}
-                                  disabled={!enrollment.course_id}
-                                  onChange={event => {
-                                    setStudentForm({
-                                      ...studentForm,
-                                      enrollments: updateStudentEnrollment(
-                                        studentForm.enrollments,
-                                        index,
-                                        'semester_id',
-                                        event.target.value
-                                      )
-                                    });
-                                    setStudentFieldErrors(current => ({
-                                      ...current,
-                                      [`enrollment_${index}`]: ''
-                                    }));
-                                  }}
-                                  required
-                                >
-                                  <option value="">Select semester</option>
-                                  {availableSemesters.map(semester => (
-                                    <option key={semester.id} value={semester.id}>
-                                      {semester.name ||
-                                        semester.label ||
-                                        `Semester ${semester.semester_number || ''}`}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
-
-                            {studentFieldErrors[`enrollment_${index}`] && (
-                              <small className="field-error">
-                                {studentFieldErrors[`enrollment_${index}`]}
-                              </small>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {studentForm.enrollments.length === 0 && (
+                    <p className="muted">
+                      No course enrollments selected. Click Add Course to begin.
+                    </p>
                   )}
+
+                  {studentForm.enrollments.map((item, index) => {
+                    const availableCourses = studentOptions.courses.filter(
+                      course =>
+                        !studentForm.department_id ||
+                        course.department_id === studentForm.department_id
+                    );
+
+                    return (
+                      <div
+                        className="student-enrollment-row"
+                        key={`${index}-${item.course_id}-${item.semester_id}`}
+                      >
+                        <div>
+                          <label htmlFor={`enrollment-course-${index}`}>
+                            Course {index + 1}
+                          </label>
+                          <select
+                            id={`enrollment-course-${index}`}
+                            value={item.course_id}
+                            onChange={event =>
+                              updateStudentEnrollment(
+                                index,
+                                'course_id',
+                                event.target.value
+                              )
+                            }
+                            required
+                          >
+                            <option value="">Select course</option>
+                            {availableCourses.map(course => (
+                              <option value={course.id} key={course.id}>
+                                {course.name}{course.code ? ` (${course.code})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          {studentFieldErrors[`enrollment_course_${index}`] && (
+                            <small className="field-error">
+                              {studentFieldErrors[`enrollment_course_${index}`]}
+                            </small>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor={`enrollment-semester-${index}`}>
+                            Semester
+                          </label>
+                          <select
+                            id={`enrollment-semester-${index}`}
+                            value={item.semester_id}
+                            onChange={event =>
+                              updateStudentEnrollment(
+                                index,
+                                'semester_id',
+                                event.target.value
+                              )
+                            }
+                            required
+                          >
+                            <option value="">Select semester</option>
+                            {studentOptions.semesters.map(semester => {
+                              const year =
+                                semester.academic_year?.label ||
+                                semester.academic_year?.year_code;
+                              const label =
+                                semester.label ||
+                                `Semester ${semester.semester_number}`;
+
+                              return (
+                                <option value={semester.id} key={semester.id}>
+                                  {year ? `${year} — ` : ''}{label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          {studentFieldErrors[`enrollment_semester_${index}`] && (
+                            <small className="field-error">
+                              {studentFieldErrors[`enrollment_semester_${index}`]}
+                            </small>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="reject-button"
+                          onClick={() => removeStudentEnrollment(index)}
+                          disabled={busy}
+                          aria-label={`Remove course enrollment ${index + 1}`}
+                        >
+                          <X size={15} /> Remove
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {studentOptionsError && (
-                  <div className="alert error">{studentOptionsError}</div>
+                <label htmlFor="student-admission-year">Admission year</label>
+                <input
+                  id="student-admission-year"
+                  inputMode="numeric"
+                  value={studentForm.admission_year}
+                  maxLength={4}
+                  aria-invalid={Boolean(studentFieldErrors.admission_year)}
+                  onChange={event =>
+                    setStudentForm({
+                      ...studentForm,
+                      admission_year: event.target.value
+                    })
+                  }
+                  placeholder="e.g. 2026"
+                />
+                {studentFieldErrors.admission_year && (
+                  <small className="field-error">
+                    {studentFieldErrors.admission_year}
+                  </small>
                 )}
 
                 <div className="modal-actions">
                   <button
                     type="button"
                     className="secondary-button"
+                    onClick={() => setStudentModal(null)}
                     disabled={busy}
-                    onClick={() => {
-                      setStudentModal(null);
-                      setSelectedStudent(null);
-                    }}
                   >
                     Cancel
                   </button>
-                  <button className="primary-button" disabled={busy}>
+                  <button
+                    className="primary-button admin-submit-button"
+                    disabled={busy}
+                  >
                     {busy
                       ? 'Saving…'
                       : studentModal === 'edit'
@@ -2659,20 +2601,23 @@ export default function App() {
           }}
         >
           <section
-            className="modal"
+            className="admin-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-modal-title"
           >
-            <div className="modal-heading">
+            <div className="panel-heading">
               <div>
-                <span className="eyebrow">ADMIN MANAGEMENT</span>
-                <h2 id="admin-modal-title">Create Admin account</h2>
+                <h2 id="admin-modal-title">Add Admin</h2>
+                <p className="muted">
+                  Create an administrator account with university-wide access.
+                </p>
               </div>
+
               <button
-                className="icon-button"
                 type="button"
-                aria-label="Close dialog"
+                className="icon-button"
+                aria-label="Close"
                 disabled={adminBusy}
                 onClick={() => setAdminDialogOpen(false)}
               >
@@ -2680,13 +2625,12 @@ export default function App() {
               </button>
             </div>
 
-            <form className="admin-form" onSubmit={createAdmin} noValidate>
+            <form onSubmit={createAdmin} noValidate>
               <label htmlFor="admin-full-name">Full name</label>
               <input
                 id="admin-full-name"
                 value={adminForm.fullName}
                 maxLength={120}
-                autoComplete="name"
                 aria-invalid={Boolean(adminFieldErrors.fullName)}
                 onChange={event => {
                   setAdminForm({
@@ -2711,8 +2655,6 @@ export default function App() {
                 id="admin-email"
                 type="email"
                 value={adminForm.email}
-                maxLength={254}
-                autoComplete="email"
                 aria-invalid={Boolean(adminFieldErrors.email)}
                 onChange={event => {
                   setAdminForm({
@@ -2796,6 +2738,7 @@ export default function App() {
                 >
                   Cancel
                 </button>
+
                 <button
                   className="primary-button admin-submit-button"
                   disabled={adminBusy}
